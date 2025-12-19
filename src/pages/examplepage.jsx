@@ -6,72 +6,32 @@ import RemarksCard from "../components/RemarksCard";
 import SummaryCard from "../components/SummaryCard";
 import Tabs from "../components/Tabs";
 import DataTable from "../components/DataTable";
-import { useState } from "react";
-import { Package,Truck,Calculator,Paperclip} from "lucide-react";
+import { useState, useMemo } from "react";
+import { Package, Truck, Calculator, Paperclip, Plus, Filter, Download, Eye, Edit, Trash2 } from "lucide-react";
 import ActionButtons from "../components/ActionButtons";
 import ModelForm from "../components/ModelForm";
+import {
+  Hash,
+  Box,
+  FileText,
+  Warehouse,
+  Scale,
+  IndianRupee,
+  Percent,
+  BadgeCheck,
+} from "lucide-react";
 
+import {
+  StatusBadge,
+} from "../components/common/TableCell";
 
 const ExamplePage = () => {
   const [activeTab, setActiveTab] = useState("Items");
-const [isEditOpen, setIsEditOpen] = useState(false);
-const handleSupplierEdit = async (data) => {
-  console.log("Updated Supplier:", data);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const [isAllSelected, setIsAllSelected] = useState(false);
 
-  // simulate API call
-  return new Promise((resolve) => {
-    setTimeout(resolve, 1500);
-  });
-};
-
-const supplierFields = [
-  {
-    name: "name",
-    label: "Supplier Name",
-    defaultValue: "JOSEPHAT ANDREA SHAYO",
-    required: true,
-  },
-  {
-    name: "code",
-    label: "Supplier Code",
-    defaultValue: "LOCS100104",
-    required: true,
-  },
-  {
-    name: "contact",
-    label: "Contact Person",
-    defaultValue: "JOSEPHAT",
-  },
-];
-  const tabs = [
-  { key: "Items", label: "Items", icon: Package },
-  { key: "Logistics", label: "Logistics", icon: Truck },
-  { key: "Accounting", label: "Accounting", icon: Calculator },
-  { key: "Attachments", label: "Attachments", icon: Paperclip },
-];
-
-  const columns = [
-    { key: "id", label: "S.No", align: "text-left" },
-    { key: "item_no", label: "Item No", align: "text-left" },
-    { key: "description", label: "Description", align: "text-left" },
-    { key: "whse", label: "Whse", align: "text-right" },
-    { key: "uom_code", label: "Uom Code", align: "text-right" },
-    { key: "uom_name", label: "Uom Name", align: "text-right" },
-    { key: "quantity", label: "Quantity", align: "text-right" },
-    { key: "unit_price", label: "Unit Price", align: "text-right" },
-    { key: "qty_whse", label: "Qty In Whse", align: "text-right" },
-    { key: "discount", label: "Discount %", align: "text-right" },
-    { key: "tax_code", label: "Tax Code", align: "text-right" },
-    { key: "base_entry", label: "Base Entry", align: "text-right" },
-    { key: "qc_remark", label: "Qc Remark", align: "text-right" },
-    {
-      key: "price_after_discount",
-      label: "Price After Discount",
-      align: "text-right",
-    },
-    { key: "total", label: "Total", align: "text-right" },
-  ];
-
+  // Updated rows data - MOVED BEFORE useMemo calls
   const rows = [
     {
       id: 1,
@@ -329,75 +289,368 @@ const supplierFields = [
       total: 1216.0,
     },
   ];
+  
+  // Handle supplier edit
+  const handleSupplierEdit = async (data) => {
+    console.log("Updated Supplier:", data);
+    return new Promise((resolve) => {
+      setTimeout(resolve, 1500);
+    });
+  };
+
+  // Handle row selection
+  const handleRowSelect = (rowId) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(rowId)) {
+      newSelected.delete(rowId);
+    } else {
+      newSelected.add(rowId);
+    }
+    setSelectedRows(newSelected);
+    updateAllSelectedStatus(newSelected);
+  };
+
+  // Handle select all
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedRows(new Set());
+      setIsAllSelected(false);
+    } else {
+      const allRowIds = rows.map(row => row.id);
+      setSelectedRows(new Set(allRowIds));
+      setIsAllSelected(true);
+    }
+  };
+
+  // Update all selected status
+  const updateAllSelectedStatus = (selectedSet) => {
+    const allRowIds = rows.map(row => row.id);
+    setIsAllSelected(selectedSet.size === allRowIds.length && allRowIds.length > 0);
+  };
+
+  // Get selected rows data
+  const selectedRowsData = useMemo(() => {
+    return rows.filter(row => selectedRows.has(row.id));
+  }, [selectedRows]);
+
+  // Handle bulk actions
+  const handleBulkAction = (action) => {
+    if (selectedRows.size === 0) return;
+    
+    console.log(`${action} selected rows:`, Array.from(selectedRows));
+    // Here you would implement the actual bulk action logic
+    alert(`${action} ${selectedRows.size} item(s)`);
+  };
+
+  const supplierFields = [
+    {
+      name: "name",
+      label: "Supplier Name",
+      defaultValue: "JOSEPHAT ANDREA SHAYO",
+      required: true,
+    },
+    {
+      name: "code",
+      label: "Supplier Code",
+      defaultValue: "LOCS100104",
+      required: true,
+    },
+    {
+      name: "contact",
+      label: "Contact Person",
+      defaultValue: "JOSEPHAT",
+    },
+  ];
+
+  const tabs = [
+    { key: "Items", label: "Items", icon: Package },
+    { key: "Logistics", label: "Logistics", icon: Truck },
+    { key: "Accounting", label: "Accounting", icon: Calculator },
+    { key: "Attachments", label: "Attachments", icon: Paperclip },
+  ];
+
+  const columns = [
+    { 
+      key: "selection", 
+      label: (
+        <div className="flex items-center gap-2">
+          <input 
+            type="checkbox" 
+            checked={isAllSelected}
+            onChange={handleSelectAll}
+            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      align: "text-center",
+      render: (_, row) => (
+        <input 
+          type="checkbox" 
+          checked={selectedRows.has(row.id)}
+          onChange={() => handleRowSelect(row.id)}
+          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+        />
+      ),
+    },
+    { key: "id", label: "S.No", icon: Hash },
+    { key: "item_no", label: "Item No", icon: Box },
+    {
+      key: "description",
+      label: "Description",
+      icon: FileText,
+    },
+    {
+      key: "whse",
+      label: "Whse",
+      align: "text-right",
+      icon: Warehouse,
+    },
+    {
+      key: "quantity",
+      label: "Qty",
+      align: "text-right",
+      icon: Scale,
+    },
+    {
+      key: "unit_price",
+      label: "Unit Price",
+      align: "text-right",
+      icon: IndianRupee,
+      render: (value) => (
+        <span className="font-semibold text-slate-900">
+          ₹ {value.toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      key: "discount",
+      label: "Discount",
+      align: "text-right",
+      icon: Percent,
+      render: (value) => (
+        <span className="text-amber-600 font-semibold">
+          {value}%
+        </span>
+      ),
+    },
+    {
+      key: "qc_remark",
+      label: "QC Status",
+      icon: BadgeCheck,
+      render: (value) => <StatusBadge value={value === "OK" ? "Active" : "Pending"} />,
+    },
+    {
+      key: "total",
+      label: "Total",
+      align: "text-right",
+      icon: IndianRupee,
+      render: (value) => (
+        <span className="font-bold text-slate-900">
+          ₹ {value.toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      align: "text-center",
+      render: (_, row) => (
+        <div className="flex items-center justify-center gap-2">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("View:", row);
+            }}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors"
+            title="View Details"
+          >
+            <Eye size={16} />
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("Edit:", row);
+            }}
+            className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors"
+            title="Edit Item"
+          >
+            <Edit size={16} />
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("Delete:", row);
+            }}
+            className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
+            title="Delete Item"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-<>
-    <Layout
-      header={
-        <div className="flex flex-col sm:flex-row min-w-full items-start sm:items-center justify-between gap-3">
-          <div className="flex-1">
-            <SupplierInfo
-              supplier={{
-                name: "JOSEPHAT ANDREA SHAYO",
-                code: "LOCS100104",
-                contact: "JOSEPHAT",
-              }}
-              po={{
-                "PO Number": "3517",
-                Status: "Open; Printed",
-                "Posting Date": "08.12.25",
-                "Delivery Date": "30.12.25",
-                "Document Date": "08.12.25",
-              }}
-               onEdit={() => setIsEditOpen(true)}
-            />
-            
+    <>
+      <Layout
+        header={
+          <div className="flex flex-col sm:flex-row min-w-full items-start sm:items-center justify-between gap-3">
+            <div className="flex-1 w-full">
+              <SupplierInfo
+                supplier={{
+                  name: "JOSEPHAT ANDREA SHAYO",
+                  code: "LOCS100104",
+                  contact: "JOSEPHAT",
+                }}
+                po={{
+                  "PO Number": "3517",
+                  Status: "Open; Printed",
+                  "Posting Date": "08.12.25",
+                  "Delivery Date": "30.12.25",
+                  "Document Date": "08.12.25",
+                }}
+                onEdit={() => setIsEditOpen(true)}
+              />
+            </div>
+          </div>
+        }
+        footer={
+          <div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4">
+              <RemarksCard remarks="For PFL AGRO1 stitching machine motor rewinding purpose." />
+              <SummaryCard
+                summary={[
+                  { label: "Total Before Discount", value: "TZS 360,000.00" },
+                  { label: "Discount", value: "0%" },
+                  { label: "Freight", value: "TZS 0.00" },
+                  { label: "Tax", value: "TZS 0.00" },
+                  { label: "Total Payment Due", value: "TZS 360,000.00" },
+                ]}
+              />
+            </div>
+          </div>
+        }
+      >
+        
+
+        
+
+        <ActionButtons />
+
+        {/* Modern Card Container */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden my-6">
+          {/* Enhanced Tabs */}
+          <div className="px-6 pt-4">
+            <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-1">
+            {activeTab === "Items" && (
+              <DataTable
+                columns={columns}
+                data={rows}
+                itemsPerPage={7}
+                onRowClick={(row) => console.log("Row clicked:", row)}
+                className="border-0"
+              />
+            )}
+            {activeTab === "Logistics" && (
+              <div className="p-8 text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Truck className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Logistics Management</h3>
+                  <p className="text-slate-600">Configure shipping, delivery schedules, and carrier information.</p>
+                </div>
+              </div>
+            )}
+            {activeTab === "Accounting" && (
+              <div className="p-8 text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Calculator className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Accounting Details</h3>
+                  <p className="text-slate-600">Manage taxes, payment terms, and financial information.</p>
+                </div>
+              </div>
+            )}
+            {activeTab === "Attachments" && (
+              <div className="p-8 text-center">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Paperclip className="w-8 h-8 text-purple-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Documents & Attachments</h3>
+                  <p className="text-slate-600">Upload and manage supporting documents, contracts, and files.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      }
-      footer={
-        <div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4">
-            <RemarksCard remarks="For PFL AGRO1 stitching machine motor rewinding purpose." />
-            <SummaryCard
-              summary={[
-                { label: "Total Before Discount", value: "TZS 360,000.00" },
-                { label: "Discount", value: "0%" },
-                { label: "Freight", value: "TZS 0.00" },
-                { label: "Tax", value: "TZS 0.00" },
-                { label: "Total Payment Due", value: "TZS 360,000.00" },
-              ]}
-            />
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-linear-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Total Items</p>
+                <p className="text-2xl font-bold text-slate-800">{rows.length}</p>
+              </div>
+              <Box className="w-8 h-8 text-blue-600" />
+            </div>
           </div>
-         
+          
+          <div className="bg-linear-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Total Value</p>
+                <p className="text-2xl font-bold text-slate-800">
+                  ₹ {rows.reduce((sum, row) => sum + row.total, 0).toFixed(2)}
+                </p>
+              </div>
+              <IndianRupee className="w-8 h-8 text-emerald-600" />
+            </div>
+          </div>
+          
+          <div className="bg-linear-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Avg Discount</p>
+                <p className="text-2xl font-bold text-slate-800">
+                  {((rows.reduce((sum, row) => sum + row.discount, 0) / rows.length) || 0).toFixed(1)}%
+                </p>
+              </div>
+              <Percent className="w-8 h-8 text-amber-600" />
+            </div>
+          </div>
+          
+          <div className="bg-linear-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-600 mb-1">QC Pass Rate</p>
+                <p className="text-2xl font-bold text-slate-800">
+                  {((rows.filter(row => row.qc_remark === "OK").length / rows.length) * 100).toFixed(0)}%
+                </p>
+              </div>
+              <BadgeCheck className="w-8 h-8 text-purple-600" />
+            </div>
+          </div>
         </div>
-      }
-    >
-      <ActionButtons/>
-      <div className="bg-white rounded-lg my-4 shadow-sm ">
-      <Tabs
-        tabs={tabs}
-        activeTab={activeTab}
-        onChange={setActiveTab}
+      </Layout>
+      
+      <ModelForm
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        title="Edit Supplier"
+        fields={supplierFields}
+        submitText="Update Supplier"
+        onSubmit={handleSupplierEdit}
       />
-
-      {activeTab === "Items" && <DataTable columns={columns} data={rows} />}
-      {activeTab === "Logistics" && (<div className="p-6 text-center text-slate-600">Logistics Content</div>)}
-      {activeTab === "Accounting" && (<div className="p-6 text-center text-slate-600">Accounting Content</div>)}
-      {activeTab === "Attachments" && (<div className="p-6 text-center text-slate-600">Attachments Content</div>)}
-
-    </div>
-
-    </Layout>
-          <ModelForm
-  isOpen={isEditOpen}
-  onClose={() => setIsEditOpen(false)}
-  title="Edit Supplier"
-  fields={supplierFields}
-  submitText="Update Supplier"
-  onSubmit={handleSupplierEdit}
-/>
-
-</>
+    </>
   );
 };
 
