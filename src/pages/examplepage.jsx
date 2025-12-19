@@ -560,7 +560,7 @@ const ExamplePage = () => {
     {
       key: "discount",
       label: "Discount",
-      align: "text-right",
+      align: "text-center",
       icon: Percent,
       render: (value) => (
         <span className="text-amber-600 font-semibold">
@@ -577,7 +577,7 @@ const ExamplePage = () => {
     {
       key: "total",
       label: "Total",
-      align: "text-right",
+      align: "text-center",
       icon: IndianRupee,
       render: (value) => (
         <span className="font-bold text-slate-900">
@@ -588,7 +588,7 @@ const ExamplePage = () => {
     {
       key: "actions",
       label: "Actions",
-      align: "text-center",
+      align: "text-left",
       render: (_, row) => (
         <div className="flex items-center justify-center gap-2">
           <button 

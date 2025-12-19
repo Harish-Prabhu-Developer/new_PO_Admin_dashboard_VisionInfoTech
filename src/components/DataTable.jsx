@@ -1,3 +1,4 @@
+// src/components/DataTable.jsx
 import React, { useState } from "react";
 import Pagination from "./common/Pagination";
 
@@ -14,31 +15,43 @@ const DataTable = ({
   const endIndex = startIndex + itemsPerPage;
   const currentData = data.slice(startIndex, endIndex);
 
+  const getAlign = (col) => col.align || "text-center";
+
   return (
-    <div
-      className={`bg-white rounded-xl border border-slate-200 shadow-sm ${className}`}
-    >
+    <div className={`bg-white rounded-xl border border-slate-200 shadow-sm ${className}`}>
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
+          
           {/* Header */}
           <thead className="bg-slate-50 border-b">
             <tr>
-                {columns.map((col) => (
-                  <th
-                    key={col.key}
-                    className="
-                      px-8 py-3
-                      text-xs font-semibold text-slate-600 uppercase tracking-wide
-                      text-left
-                    "
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  className={`
+                    px-4 py-3
+                    text-xs font-semibold text-slate-600 uppercase tracking-wide
+                    ${getAlign(col)}
+                  `}
+                >
+                  <div
+                    className={`
+                      flex items-center gap-1
+                      ${
+                        col.align === "text-left"
+                          ? "justify-start"
+                          : col.align === "text-right"
+                          ? "justify-end"
+                          : "justify-center"
+                      }
+                    `}
                   >
-                    <div className="flex items-center gap-1">
-                      {col.label}
-                      {col.icon && <col.icon className="w-3 h-3 opacity-60" />}
-                    </div>
-                  </th>
-                ))}
+                    {col.label}
+                    {col.icon && <col.icon className="w-3 h-3 opacity-60" />}
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
 
@@ -48,16 +61,15 @@ const DataTable = ({
               <tr
                 key={rowIndex}
                 onClick={() => onRowClick?.(row)}
-                className="
-                  hover:bg-slate-50
-                  transition
-                  cursor-pointer
-                "
+                className="hover:bg-slate-50 transition cursor-pointer"
               >
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className={`px-4 py-3 text-slate-700 ${col.align || "text-left"}`}
+                    className={`
+                      px-4 py-3 text-slate-700
+                      ${getAlign(col)}
+                    `}
                   >
                     {col.render
                       ? col.render(row[col.key], row)
