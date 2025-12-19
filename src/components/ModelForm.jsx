@@ -13,17 +13,29 @@ const ModelForm = ({
   if (!isOpen) return null;
 
   const [status, setStatus] = useState("idle");
-  // idle | loading | success | error
+  const [formData, setFormData] = useState({});
+
+  // Initialize form data from fields
+  useEffect(() => {
+    const initialData = {};
+    fields.forEach((field) => {
+      initialData[field.name] = field.defaultValue || "";
+    });
+    setFormData(initialData);
+  }, [fields, isOpen]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (status !== "idle") return;
-
-    const formData = {};
-    fields.forEach((field) => {
-      formData[field.name] = e.target[field.name]?.value;
-    });
 
     try {
       setStatus("loading");
@@ -42,6 +54,7 @@ const ModelForm = ({
     if (status === "success") {
       const timer = setTimeout(() => {
         setStatus("idle");
+        setFormData({});
         onClose();
       }, 1800);
 
@@ -50,41 +63,103 @@ const ModelForm = ({
   }, [status, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <style>{`
+        .modern-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        .modern-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        
+        .modern-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #3b82f6, #1e40af);
+          border-radius: 10px;
+          transition: all 0.3s ease;
+        }
+        
+        .modern-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #1e40af, #1e3a8a);
+          box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+        }
+        
+        /* Firefox */
+        .modern-scrollbar {
+          scrollbar-color: #3b82f6 transparent;
+          scrollbar-width: thin;
+        }
+      `}</style>
+      
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col max-h-[90vh] transition-all duration-300">
         {/* Header */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-gray-500 text-xl">
-            ✕
+        <div className="flex justify-between items-center mb-6 shrink-0">
+          <h2 className="text-xl font-bold bg-linear-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+            {title}
+          </h2>
+          <button 
+            onClick={onClose} 
+            className="text-gray-400 hover:text-gray-600 transition-colors duration-200 hover:bg-gray-100 rounded-full p-1"
+            type="button"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {fields.map((field) => (
-            <div key={field.name}>
-              <label className="block text-sm font-medium mb-1">
-                {field.label}
-              </label>
-              <input
-                type={field.type || "text"}
-                name={field.name}
-                placeholder={field.placeholder}
-                defaultValue={field.defaultValue || ""}
-                required={field.required}
-                className="w-full border rounded px-3 py-2"
-              />
-            </div>
-          ))}
+        {/* Form with Scrollable Fields */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Scrollable Fields Container */}
+          <div className="modern-scrollbar space-y-4 overflow-y-auto flex-1 pr-1 mb-6">
+            {fields.map((field, index) => (
+              <div 
+                key={field.name}
+                className="animate-fade-in"
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                  animation: `fadeIn 0.3s ease-in-out forwards`,
+                  opacity: 0,
+                }}
+              >
+                <style>{`
+                  @keyframes fadeIn {
+                    from {
+                      opacity: 0;
+                      transform: translateY(-5px);
+                    }
+                    to {
+                      opacity: 1;
+                      transform: translateY(0);
+                    }
+                  }
+                `}</style>
+                
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {field.label}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                <input
+                  type={field.type || "text"}
+                  name={field.name}
+                  placeholder={field.placeholder}
+                  value={formData[field.name] || ""}
+                  onChange={handleInputChange}
+                  required={field.required}
+                  disabled={status === "loading"}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200 text-gray-800"
+                />
+              </div>
+            ))}
+          </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
+          {/* Actions - Fixed at bottom */}
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={status === "loading"}
-              className="px-4 py-2 border rounded disabled:opacity-50"
+              className="px-4 py-2.5 border-2 border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               Cancel
             </button>
@@ -95,36 +170,37 @@ const ModelForm = ({
               disabled={status === "loading"}
               className={`
                 group inline-flex items-center gap-2
-                px-4 py-2 rounded
-                text-sm font-medium text-white
+                px-6 py-2.5 rounded-lg
+                text-sm font-semibold text-white
                 transition-all duration-300
                 active:scale-95
                 disabled:cursor-not-allowed
+                shadow-lg hover:shadow-xl
                 ${
                   status === "idle" &&
-                  "bg-blue-600 hover:bg-blue-700"
+                  "bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                 }
                 ${
                   status === "loading" &&
-                  "bg-blue-600 opacity-80"
+                  "bg-linear-to-r from-blue-600 to-blue-700 opacity-80"
                 }
                 ${
                   status === "success" &&
-                  "bg-emerald-600"
+                  "bg-linear-to-r from-emerald-500 to-emerald-600"
                 }
                 ${
                   status === "error" &&
-                  "bg-red-600 hover:bg-red-700"
+                  "bg-linear-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
                 }
               `}
             >
               {/* Icons */}
-              {status === "idle" && <Send size={16} />}
+              {status === "idle" && <Send size={18} />}
               {status === "loading" && (
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2 size={18} className="animate-spin" />
               )}
-              {status === "success" && <Check size={16} />}
-              {status === "error" && <XCircle size={16} />}
+              {status === "success" && <Check size={18} />}
+              {status === "error" && <XCircle size={18} />}
 
               {/* Labels */}
               <span>

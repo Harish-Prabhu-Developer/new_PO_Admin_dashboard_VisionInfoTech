@@ -28,11 +28,12 @@ import {
 const ExamplePage = () => {
   const [activeTab, setActiveTab] = useState("Items");
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
+  const [isEditItemOpen, setIsEditItemOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [isAllSelected, setIsAllSelected] = useState(false);
-
-  // Updated rows data - MOVED BEFORE useMemo calls
-  const rows = [
+  const [editingItem, setEditingItem] = useState(null);
+  const [rows, setRows] = useState([
     {
       id: 1,
       item_no: "ITM-0001",
@@ -288,14 +289,91 @@ const ExamplePage = () => {
       price_after_discount: 304.0,
       total: 1216.0,
     },
-  ];
+  ]);
   
+  // Handle calculate total
+  const calculateTotal = (quantity, unitPrice, discount = 0) => {
+    const subtotal = quantity * unitPrice;
+    const discountAmount = (subtotal * discount) / 100;
+    return subtotal - discountAmount;
+  };
+
   // Handle supplier edit
   const handleSupplierEdit = async (data) => {
     console.log("Updated Supplier:", data);
     return new Promise((resolve) => {
       setTimeout(resolve, 1500);
     });
+  };
+
+  // Handle add item
+  const handleAddItem = async (data) => {
+    const newItem = {
+      id: Math.max(...rows.map(r => r.id), 0) + 1,
+      item_no: data.item_no,
+      description: data.description,
+      whse: data.whse,
+      uom_code: data.uom_code,
+      uom_name: data.uom_code,
+      quantity: parseFloat(data.quantity) || 0,
+      unit_price: parseFloat(data.unit_price) || 0,
+      qty_whse: 0,
+      discount: parseFloat(data.discount) || 0,
+      tax_code: data.tax_code || "GST18",
+      base_entry: 0,
+      qc_remark: data.qc_remark || "OK",
+      price_after_discount: 0,
+      total: 0,
+    };
+    
+    // Calculate total
+    newItem.total = calculateTotal(newItem.quantity, newItem.unit_price, newItem.discount);
+    newItem.price_after_discount = newItem.unit_price - (newItem.unit_price * newItem.discount / 100);
+    
+    setRows([...rows, newItem]);
+    setIsAddItemOpen(false);
+    console.log("Item Added:", newItem);
+    return new Promise((resolve) => {
+      setTimeout(resolve, 1500);
+    });
+  };
+
+  // Handle edit item
+  const handleEditItem = async (data) => {
+    if (!editingItem) return;
+    
+    const updatedItem = {
+      ...editingItem,
+      item_no: data.item_no,
+      description: data.description,
+      whse: data.whse,
+      uom_code: data.uom_code,
+      quantity: parseFloat(data.quantity) || 0,
+      unit_price: parseFloat(data.unit_price) || 0,
+      discount: parseFloat(data.discount) || 0,
+      tax_code: data.tax_code || "GST18",
+      qc_remark: data.qc_remark || "OK",
+    };
+    
+    // Recalculate total
+    updatedItem.total = calculateTotal(updatedItem.quantity, updatedItem.unit_price, updatedItem.discount);
+    updatedItem.price_after_discount = updatedItem.unit_price - (updatedItem.unit_price * updatedItem.discount / 100);
+    
+    setRows(rows.map(row => row.id === editingItem.id ? updatedItem : row));
+    setIsEditItemOpen(false);
+    setEditingItem(null);
+    console.log("Item Updated:", updatedItem);
+    return new Promise((resolve) => {
+      setTimeout(resolve, 1500);
+    });
+  };
+
+  // Handle delete item
+  const handleDeleteItem = (itemId) => {
+    if (window.confirm("Are you sure you want to delete this item?")) {
+      setRows(rows.filter(row => row.id !== itemId));
+      console.log("Item Deleted with ID:", itemId);
+    }
   };
 
   // Handle row selection
@@ -359,6 +437,63 @@ const ExamplePage = () => {
       name: "contact",
       label: "Contact Person",
       defaultValue: "JOSEPHAT",
+    },
+  ];
+
+  const itemFields = [
+    {
+      name: "item_no",
+      label: "Item No",
+      placeholder: "ITM-0001",
+      required: true,
+    },
+    {
+      name: "description",
+      label: "Description",
+      placeholder: "Enter item description",
+      required: true,
+    },
+    {
+      name: "whse",
+      label: "Warehouse",
+      placeholder: "MAIN",
+      required: true,
+    },
+    {
+      name: "uom_code",
+      label: "UOM Code",
+      placeholder: "PKT",
+      required: true,
+    },
+    {
+      name: "quantity",
+      label: "Quantity",
+      type: "number",
+      placeholder: "0",
+      required: true,
+    },
+    {
+      name: "unit_price",
+      label: "Unit Price",
+      type: "number",
+      placeholder: "0.00",
+      required: true,
+    },
+    {
+      name: "discount",
+      label: "Discount (%)",
+      type: "number",
+      placeholder: "0",
+    },
+    {
+      name: "tax_code",
+      label: "Tax Code",
+      placeholder: "GST18",
+    },
+    {
+      name: "qc_remark",
+      label: "QC Remark",
+      placeholder: "OK",
     },
   ];
 
@@ -469,7 +604,8 @@ const ExamplePage = () => {
           <button 
             onClick={(e) => {
               e.stopPropagation();
-              console.log("Edit:", row);
+              setEditingItem(row);
+              setIsEditItemOpen(true);
             }}
             className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors"
             title="Edit Item"
@@ -479,7 +615,7 @@ const ExamplePage = () => {
           <button 
             onClick={(e) => {
               e.stopPropagation();
-              console.log("Delete:", row);
+              handleDeleteItem(row.id);
             }}
             className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
             title="Delete Item"
@@ -542,6 +678,18 @@ const ExamplePage = () => {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden my-6">
           {/* Enhanced Tabs */}
           <div className="px-6 pt-4">
+            {/* Add Item Button */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Items</h3>
+              <button
+                onClick={() => setIsAddItemOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                title="Add a new item"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Add Item</span>
+              </button>
+            </div>
             <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
           </div>
 
@@ -649,6 +797,22 @@ const ExamplePage = () => {
         fields={supplierFields}
         submitText="Update Supplier"
         onSubmit={handleSupplierEdit}
+      />
+
+      <ModelForm
+        isOpen={isAddItemOpen || isEditItemOpen}
+        onClose={() => {
+          setIsAddItemOpen(false);
+          setIsEditItemOpen(false);
+          setEditingItem(null);
+        }}
+        title={isEditItemOpen ? "Edit Item" : "Add New Item"}
+        fields={itemFields.map(field => ({
+          ...field,
+          defaultValue: isEditItemOpen && editingItem ? editingItem[field.name] : "",
+        }))}
+        submitText={isEditItemOpen ? "Update Item" : "Add Item"}
+        onSubmit={isEditItemOpen ? handleEditItem : handleAddItem}
       />
     </>
   );
