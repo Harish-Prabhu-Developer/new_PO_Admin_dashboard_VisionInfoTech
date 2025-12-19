@@ -373,12 +373,12 @@ const ExamplePage = () => {
     { 
       key: "selection", 
       label: (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <input 
             type="checkbox" 
             checked={isAllSelected}
             onChange={handleSelectAll}
-            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            className=" w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
           />
         </div>
       ),

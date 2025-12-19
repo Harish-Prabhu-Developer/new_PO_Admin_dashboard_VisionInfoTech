@@ -28,7 +28,7 @@ const DataTable = ({
                   <th
                     key={col.key}
                     className="
-                      px-4 py-3
+                      px-8 py-3
                       text-xs font-semibold text-slate-600 uppercase tracking-wide
                       text-left
                     "
