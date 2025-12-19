@@ -1,0 +1,20 @@
+@import "tailwindcss";
+@theme {
+  /* Primary Colors */
+  --color-primary: oklch(62% 0.19 260);
+  --color-primary-dark: oklch(52% 0.21 260);
+
+  /* Secondary */
+  --color-secondary: oklch(55% 0.03 250);
+
+  /* Backgrounds */
+  --color-background: oklch(97% 0.01 250);
+  --color-card-background: oklch(100% 0 0);
+}
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-slate-900);
+    font-family: 'Inter', sans-serif;
+  }
+}
