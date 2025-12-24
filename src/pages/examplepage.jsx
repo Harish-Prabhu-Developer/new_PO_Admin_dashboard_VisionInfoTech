@@ -6,11 +6,20 @@ import RemarksCard from "../components/RemarksCard";
 import SummaryCard from "../components/SummaryCard";
 import Tabs from "../components/Tabs";
 import DataTable from "../components/DataTable";
-import { useState, useMemo } from "react";
-import { Package, Truck, Calculator, Paperclip, Plus, Filter, Download, Eye, Edit, Trash2 } from "lucide-react";
-import ActionButtons from "../components/ActionButtons";
-import ModelForm from "../components/ModelForm";
+import { useState, useMemo, useEffect } from "react";
 import {
+  Package,
+  Truck,
+  Calculator,
+  Paperclip,
+  Plus,
+  Eye,
+  Edit,
+  Trash2,
+  FolderTree,
+  Calendar,
+  AlignLeft,
+  MoreVertical,
   Hash,
   Box,
   FileText,
@@ -19,20 +28,81 @@ import {
   IndianRupee,
   Percent,
   BadgeCheck,
+  Loader2,
 } from "lucide-react";
+import ModelForm from "../components/ModelForm";
 
-import {
-  StatusBadge,
-} from "../components/common/TableCell";
+import { StatusBadge } from "../components/common/TableCell";
 
 const ExamplePage = () => {
   const [activeTab, setActiveTab] = useState("Items");
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
-  const [isEditItemOpen, setIsEditItemOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [isAllSelected, setIsAllSelected] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [editingAttachment, setEditingAttachment] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  // Loading states
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [isLoadingLogistics, setIsLoadingLogistics] = useState(false);
+  const [isLoadingSupplier, setIsLoadingSupplier] = useState(false);
+  const [isModalLoading, setIsModalLoading] = useState(false);
+
+  // Single state for the modal form
+  const [modalForm, setModalForm] = useState({
+    isOpen: false,
+    title: "",
+    fields: [],
+    submitText: "Submit",
+    onSubmit: null,
+    onCloseCallback: null,
+  });
+
+  // Simulate loading when tab changes
+  useEffect(() => {
+    if (activeTab === "Items") {
+      setIsLoadingItems(true);
+      setTimeout(() => setIsLoadingItems(false), 500);
+    } else if (activeTab === "Attachments") {
+      setIsLoadingAttachments(true);
+      setTimeout(() => setIsLoadingAttachments(false), 500);
+    } else if (activeTab === "Logistics") {
+      setIsLoadingLogistics(true);
+      setTimeout(() => setIsLoadingLogistics(false), 500);
+    }
+  }, [activeTab]);
+
+  // Open modal form helper
+  const openModalForm = ({ title, fields, submitText, onSubmit, onCloseCallback }) => {
+    setModalForm({
+      isOpen: true,
+      title,
+      fields,
+      submitText,
+      onSubmit,
+      onCloseCallback,
+    });
+  };
+
+  // Close modal form helper
+  const closeModalForm = () => {
+    if (modalForm.onCloseCallback) {
+      modalForm.onCloseCallback();
+    }
+    setModalForm({
+      isOpen: false,
+      title: "",
+      fields: [],
+      submitText: "Submit",
+      onSubmit: null,
+      onCloseCallback: null,
+    });
+    setEditingItem(null);
+    setEditingAttachment(null);
+    setSelectedFile(null);
+  };
+
   const [rows, setRows] = useState([
     {
       id: 1,
@@ -290,7 +360,8 @@ const ExamplePage = () => {
       total: 1216.0,
     },
   ]);
-  
+  const [attachmentsrows, setAttachmentsRows] = useState([]);
+
   // Handle calculate total
   const calculateTotal = (quantity, unitPrice, discount = 0) => {
     const subtotal = quantity * unitPrice;
@@ -309,7 +380,7 @@ const ExamplePage = () => {
   // Handle add item
   const handleAddItem = async (data) => {
     const newItem = {
-      id: Math.max(...rows.map(r => r.id), 0) + 1,
+      id: Math.max(...rows.map((r) => r.id), 0) + 1,
       item_no: data.item_no,
       description: data.description,
       whse: data.whse,
@@ -325,13 +396,17 @@ const ExamplePage = () => {
       price_after_discount: 0,
       total: 0,
     };
-    
+
     // Calculate total
-    newItem.total = calculateTotal(newItem.quantity, newItem.unit_price, newItem.discount);
-    newItem.price_after_discount = newItem.unit_price - (newItem.unit_price * newItem.discount / 100);
-    
+    newItem.total = calculateTotal(
+      newItem.quantity,
+      newItem.unit_price,
+      newItem.discount
+    );
+    newItem.price_after_discount =
+      newItem.unit_price - (newItem.unit_price * newItem.discount) / 100;
+
     setRows([...rows, newItem]);
-    setIsAddItemOpen(false);
     console.log("Item Added:", newItem);
     return new Promise((resolve) => {
       setTimeout(resolve, 1500);
@@ -341,7 +416,7 @@ const ExamplePage = () => {
   // Handle edit item
   const handleEditItem = async (data) => {
     if (!editingItem) return;
-    
+
     const updatedItem = {
       ...editingItem,
       item_no: data.item_no,
@@ -354,14 +429,18 @@ const ExamplePage = () => {
       tax_code: data.tax_code || "GST18",
       qc_remark: data.qc_remark || "OK",
     };
-    
+
     // Recalculate total
-    updatedItem.total = calculateTotal(updatedItem.quantity, updatedItem.unit_price, updatedItem.discount);
-    updatedItem.price_after_discount = updatedItem.unit_price - (updatedItem.unit_price * updatedItem.discount / 100);
-    
-    setRows(rows.map(row => row.id === editingItem.id ? updatedItem : row));
-    setIsEditItemOpen(false);
-    setEditingItem(null);
+    updatedItem.total = calculateTotal(
+      updatedItem.quantity,
+      updatedItem.unit_price,
+      updatedItem.discount
+    );
+    updatedItem.price_after_discount =
+      updatedItem.unit_price -
+      (updatedItem.unit_price * updatedItem.discount) / 100;
+
+    setRows(rows.map((row) => (row.id === editingItem.id ? updatedItem : row)));
     console.log("Item Updated:", updatedItem);
     return new Promise((resolve) => {
       setTimeout(resolve, 1500);
@@ -371,7 +450,7 @@ const ExamplePage = () => {
   // Handle delete item
   const handleDeleteItem = (itemId) => {
     if (window.confirm("Are you sure you want to delete this item?")) {
-      setRows(rows.filter(row => row.id !== itemId));
+      setRows(rows.filter((row) => row.id !== itemId));
       console.log("Item Deleted with ID:", itemId);
     }
   };
@@ -394,7 +473,7 @@ const ExamplePage = () => {
       setSelectedRows(new Set());
       setIsAllSelected(false);
     } else {
-      const allRowIds = rows.map(row => row.id);
+      const allRowIds = rows.map((row) => row.id);
       setSelectedRows(new Set(allRowIds));
       setIsAllSelected(true);
     }
@@ -402,24 +481,18 @@ const ExamplePage = () => {
 
   // Update all selected status
   const updateAllSelectedStatus = (selectedSet) => {
-    const allRowIds = rows.map(row => row.id);
-    setIsAllSelected(selectedSet.size === allRowIds.length && allRowIds.length > 0);
+    const allRowIds = rows.map((row) => row.id);
+    setIsAllSelected(
+      selectedSet.size === allRowIds.length && allRowIds.length > 0
+    );
   };
 
   // Get selected rows data
   const selectedRowsData = useMemo(() => {
-    return rows.filter(row => selectedRows.has(row.id));
+    return rows.filter((row) => selectedRows.has(row.id));
   }, [selectedRows]);
 
-  // Handle bulk actions
-  const handleBulkAction = (action) => {
-    if (selectedRows.size === 0) return;
-    
-    console.log(`${action} selected rows:`, Array.from(selectedRows));
-    // Here you would implement the actual bulk action logic
-    alert(`${action} ${selectedRows.size} item(s)`);
-  };
-
+  // Field configurations
   const supplierFields = [
     {
       name: "name",
@@ -497,6 +570,114 @@ const ExamplePage = () => {
     },
   ];
 
+  const attachmentFields = [
+    {
+      name: "path",
+      label: "Target Path",
+      placeholder: "/documents/po",
+      required: true,
+    },
+    {
+      name: "filename",
+      label: "File Name",
+      placeholder: "invoice.pdf",
+      required: true,
+    },
+    {
+      name: "attachment_date",
+      label: "Attachment Date",
+      type: "date",
+      required: true,
+    },
+    {
+      name: "free_text",
+      label: "Remarks",
+      placeholder: "Optional notes",
+    },
+  ];
+
+  const attachmentColumns = [
+    { key: "path", label: "Target Path", icon: FolderTree },
+    { key: "filename", label: "File Name", icon: FileText },
+    { key: "attachment_date", label: "Attachment Date", icon: Calendar },
+    { key: "free_text", label: "Free Text", icon: AlignLeft },
+    {
+      key: "actions",
+      label: "Actions",
+      icon: MoreVertical,
+      render: (_, row) => (
+        <div className="flex items-center gap-2 justify-center">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingAttachment(row);
+              openModalForm({
+                title: "Edit Attachment",
+                fields: attachmentFields.map((f) => ({
+                  ...f,
+                  defaultValue: row[f.name] || "",
+                })),
+                submitText: "Update",
+                onSubmit: handleEditAttachment,
+                onCloseCallback: () => setEditingAttachment(null),
+              });
+            }}
+            className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600"
+          >
+            <Edit size={16} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteAttachment(row.id);
+            }}
+            className="p-1.5 rounded-lg hover:bg-red-50 text-red-600"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  const handleAddAttachment = async (data) => {
+    const newAttachment = {
+      id: Math.max(0, ...attachmentsrows.map((a) => a.id)) + 1,
+      path: data.path,
+      filename: data.filename,
+      attachment_date: data.attachment_date,
+      free_text: data.free_text || "",
+    };
+
+    setAttachmentsRows([...attachmentsrows, newAttachment]);
+    console.log("Attachment Added:", newAttachment);
+    return new Promise((resolve) => setTimeout(resolve, 800));
+  };
+
+  const handleEditAttachment = async (data) => {
+    if (!editingAttachment) return;
+
+    const updated = {
+      ...editingAttachment,
+      ...data,
+    };
+
+    setAttachmentsRows(
+      attachmentsrows.map((row) =>
+        row.id === editingAttachment.id ? updated : row
+      )
+    );
+
+    console.log("Attachment Updated:", updated);
+    return new Promise((resolve) => setTimeout(resolve, 800));
+  };
+
+  const handleDeleteAttachment = (id) => {
+    if (window.confirm("Delete this attachment?")) {
+      setAttachmentsRows(attachmentsrows.filter((a) => a.id !== id));
+    }
+  };
+
   const tabs = [
     { key: "Items", label: "Items", icon: Package },
     { key: "Logistics", label: "Logistics", icon: Truck },
@@ -505,22 +686,22 @@ const ExamplePage = () => {
   ];
 
   const columns = [
-    { 
-      key: "selection", 
+    {
+      key: "selection",
       label: (
         <div className="flex items-center">
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             checked={isAllSelected}
             onChange={handleSelectAll}
-            className=" w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
           />
         </div>
       ),
       align: "text-center",
       render: (_, row) => (
-        <input 
-          type="checkbox" 
+        <input
+          type="checkbox"
           checked={selectedRows.has(row.id)}
           onChange={() => handleRowSelect(row.id)}
           className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
@@ -552,9 +733,7 @@ const ExamplePage = () => {
       align: "text-right",
       icon: IndianRupee,
       render: (value) => (
-        <span className="font-semibold text-slate-900">
-          ₹ {value.toFixed(2)}
-        </span>
+        <span className="font-semibold text-slate-900">₹ {value.toFixed(2)}</span>
       ),
     },
     {
@@ -563,16 +742,16 @@ const ExamplePage = () => {
       align: "text-center",
       icon: Percent,
       render: (value) => (
-        <span className="text-amber-600 font-semibold">
-          {value}%
-        </span>
+        <span className="text-amber-600 font-semibold">{value}%</span>
       ),
     },
     {
       key: "qc_remark",
       label: "QC Status",
       icon: BadgeCheck,
-      render: (value) => <StatusBadge value={value === "OK" ? "Active" : "Pending"} />,
+      render: (value) => (
+        <StatusBadge value={value === "OK" ? "Active" : "Pending"} />
+      ),
     },
     {
       key: "total",
@@ -580,9 +759,7 @@ const ExamplePage = () => {
       align: "text-center",
       icon: IndianRupee,
       render: (value) => (
-        <span className="font-bold text-slate-900">
-          ₹ {value.toFixed(2)}
-        </span>
+        <span className="font-bold text-slate-900">₹ {value.toFixed(2)}</span>
       ),
     },
     {
@@ -591,7 +768,7 @@ const ExamplePage = () => {
       align: "text-left",
       render: (_, row) => (
         <div className="flex items-center justify-center gap-2">
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation();
               console.log("View:", row);
@@ -601,18 +778,27 @@ const ExamplePage = () => {
           >
             <Eye size={16} />
           </button>
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation();
               setEditingItem(row);
-              setIsEditItemOpen(true);
+              openModalForm({
+                title: "Edit Item",
+                fields: itemFields.map((field) => ({
+                  ...field,
+                  defaultValue: row[field.name] || "",
+                })),
+                submitText: "Update Item",
+                onSubmit: handleEditItem,
+                onCloseCallback: () => setEditingItem(null),
+              });
             }}
             className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors"
             title="Edit Item"
           >
             <Edit size={16} />
           </button>
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation();
               handleDeleteItem(row.id);
@@ -646,49 +832,57 @@ const ExamplePage = () => {
                   "Delivery Date": "30.12.25",
                   "Document Date": "08.12.25",
                 }}
-                onEdit={() => setIsEditOpen(true)}
+                onEdit={() => {
+                  openModalForm({
+                    title: "Edit Supplier",
+                    fields: supplierFields,
+                    submitText: "Update Supplier",
+                    onSubmit: handleSupplierEdit,
+                  });
+                }}
               />
             </div>
           </div>
         }
         footer={
-          <div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-4">
-              <RemarksCard remarks="For PFL AGRO1 stitching machine motor rewinding purpose." />
-              <SummaryCard
-                summary={[
-                  { label: "Total Before Discount", value: "TZS 360,000.00" },
-                  { label: "Discount", value: "0%" },
-                  { label: "Freight", value: "TZS 0.00" },
-                  { label: "Tax", value: "TZS 0.00" },
-                  { label: "Total Payment Due", value: "TZS 360,000.00" },
-                ]}
-              />
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            <RemarksCard remarks="For PFL AGRO1 stitching machine motor rewinding purpose." />
+            <SummaryCard
+              summary={[
+                { label: "Total Before Discount", value: "TZS 360,000.00" },
+                { label: "Discount", value: "0%" },
+                { label: "Freight", value: "TZS 0.00" },
+                { label: "Tax", value: "TZS 0.00" },
+                { label: "Total Payment Due", value: "TZS 360,000.00" },
+              ]}
+            />
           </div>
         }
       >
-        
-
-        
-
-        <ActionButtons />
-
         {/* Modern Card Container */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden my-6">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden my-2">
           {/* Enhanced Tabs */}
           <div className="px-6 pt-4">
             {/* Add Item Button */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between ">
               <h3 className="text-lg font-semibold text-slate-900">Items</h3>
-              <button
-                onClick={() => setIsAddItemOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                title="Add a new item"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Add Item</span>
-              </button>
+              {activeTab === "Items" && (
+                <button
+                  onClick={() => {
+                    openModalForm({
+                      title: "Add New Item",
+                      fields: itemFields,
+                      submitText: "Add Item",
+                      onSubmit: handleAddItem,
+                    });
+                  }}
+                  className="animate-fade-right animate-once animate-ease-out flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  title="Add a new item"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Add Item</span>
+                </button>
+              )}
             </div>
             <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
           </div>
@@ -705,37 +899,95 @@ const ExamplePage = () => {
               />
             )}
             {activeTab === "Logistics" && (
-              <div className="p-8 text-center">
-                <div className="max-w-md mx-auto">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Truck className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Logistics Management</h3>
-                  <p className="text-slate-600">Configure shipping, delivery schedules, and carrier information.</p>
-                </div>
-              </div>
+              <DataTable
+                columns={[
+                  { key: "key", label: "" },
+                  { key: "value", label: "" },
+                ]}
+                data={[
+                  { key: "Ship To", value: "10974 KISONGO" },
+                  { key: "Bill To", value: "ACCOUNTS DEPT - ARUSHA" },
+                  { key: "Delivery Date", value: "2025-12-30" },
+                  { key: "Shipping Type", value: "Road Transport" },
+                  { key: "Transport Mode", value: "Truck" },
+                  { key: "Incoterms", value: "DAP" },
+                  { key: "Tracking No", value: "" },
+                  { key: "Vehicle No", value: "" },
+                  { key: "Warehouse", value: "MAIN" },
+                ]}
+                itemsPerPage={7}
+                className="border"
+              />
             )}
+
             {activeTab === "Accounting" && (
               <div className="p-8 text-center">
                 <div className="max-w-md mx-auto">
                   <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Calculator className="w-8 h-8 text-emerald-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Accounting Details</h3>
-                  <p className="text-slate-600">Manage taxes, payment terms, and financial information.</p>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                    Accounting Details
+                  </h3>
+                  <p className="text-slate-600">
+                    Manage taxes, payment terms, and financial information.
+                  </p>
                 </div>
               </div>
             )}
             {activeTab === "Attachments" && (
-              <div className="p-8 text-center">
-                <div className="max-w-md mx-auto">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Paperclip className="w-8 h-8 text-purple-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-800 mb-2">Documents & Attachments</h3>
-                  <p className="text-slate-600">Upload and manage supporting documents, contracts, and files.</p>
+              <>
+                <div className="flex justify-end px-4 py-2">
+                  <button
+                    onClick={() => {
+                      openModalForm({
+                        title: "Add Attachment",
+                        fields: attachmentFields,
+                        submitText: "Add Attachment",
+                        onSubmit: handleAddAttachment,
+                      });
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Plus size={16} />
+                    Add Attachment
+                  </button>
                 </div>
-              </div>
+
+                <DataTable
+                  columns={attachmentColumns}
+                  data={attachmentsrows}
+                  itemsPerPage={7}
+                  className="border-0"
+                >
+                  <div className="flex flex-col items-center gap-3 text-center">
+                    <img
+                      src="https://placehold.co/180x100?text=No+Attachments"
+                      alt="No attachments"
+                      className="rounded-md opacity-80"
+                    />
+                    <p className="text-sm font-semibold text-slate-700">
+                      No attachments found
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Upload documents related to this purchase order.
+                    </p>
+                    <button
+                      onClick={() => {
+                        openModalForm({
+                          title: "Add Attachment",
+                          fields: attachmentFields,
+                          submitText: "Add Attachment",
+                          onSubmit: handleAddAttachment,
+                        });
+                      }}
+                      className="text-blue-600 text-xs font-medium"
+                    >
+                      Upload Attachment
+                    </button>
+                  </div>
+                </DataTable>
+              </>
             )}
           </div>
         </div>
@@ -746,12 +998,14 @@ const ExamplePage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">Total Items</p>
-                <p className="text-2xl font-bold text-slate-800">{rows.length}</p>
+                <p className="text-2xl font-bold text-slate-800">
+                  {rows.length}
+                </p>
               </div>
               <Box className="w-8 h-8 text-blue-600" />
             </div>
           </div>
-          
+
           <div className="bg-linear-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -763,25 +1017,34 @@ const ExamplePage = () => {
               <IndianRupee className="w-8 h-8 text-emerald-600" />
             </div>
           </div>
-          
+
           <div className="bg-linear-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">Avg Discount</p>
                 <p className="text-2xl font-bold text-slate-800">
-                  {((rows.reduce((sum, row) => sum + row.discount, 0) / rows.length) || 0).toFixed(1)}%
+                  {(
+                    rows.reduce((sum, row) => sum + row.discount, 0) /
+                      rows.length || 0
+                  ).toFixed(1)}
+                  %
                 </p>
               </div>
               <Percent className="w-8 h-8 text-amber-600" />
             </div>
           </div>
-          
+
           <div className="bg-linear-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600 mb-1">QC Pass Rate</p>
                 <p className="text-2xl font-bold text-slate-800">
-                  {((rows.filter(row => row.qc_remark === "OK").length / rows.length) * 100).toFixed(0)}%
+                  {(
+                    (rows.filter((row) => row.qc_remark === "OK").length /
+                      rows.length) *
+                    100
+                  ).toFixed(0)}
+                  %
                 </p>
               </div>
               <BadgeCheck className="w-8 h-8 text-purple-600" />
@@ -789,30 +1052,15 @@ const ExamplePage = () => {
           </div>
         </div>
       </Layout>
-      
-      <ModelForm
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        title="Edit Supplier"
-        fields={supplierFields}
-        submitText="Update Supplier"
-        onSubmit={handleSupplierEdit}
-      />
 
+      {/* Single ModelForm instance */}
       <ModelForm
-        isOpen={isAddItemOpen || isEditItemOpen}
-        onClose={() => {
-          setIsAddItemOpen(false);
-          setIsEditItemOpen(false);
-          setEditingItem(null);
-        }}
-        title={isEditItemOpen ? "Edit Item" : "Add New Item"}
-        fields={itemFields.map(field => ({
-          ...field,
-          defaultValue: isEditItemOpen && editingItem ? editingItem[field.name] : "",
-        }))}
-        submitText={isEditItemOpen ? "Update Item" : "Add Item"}
-        onSubmit={isEditItemOpen ? handleEditItem : handleAddItem}
+        isOpen={modalForm.isOpen}
+        onClose={closeModalForm}
+        title={modalForm.title}
+        fields={modalForm.fields}
+        submitText={modalForm.submitText}
+        onSubmit={modalForm.onSubmit}
       />
     </>
   );

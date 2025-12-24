@@ -1,6 +1,6 @@
 // src/components/ModelForm.jsx
 import React, { useState, useEffect } from "react";
-import { Send, Loader2, Check, XCircle } from "lucide-react";
+import { Send, Loader, Check, XCircle } from "lucide-react";
 
 const ModelForm = ({
   isOpen,
@@ -197,7 +197,7 @@ const ModelForm = ({
               {/* Icons */}
               {status === "idle" && <Send size={18} />}
               {status === "loading" && (
-                <Loader2 size={18} className="animate-spin" />
+                <Loader size={18} className="animate-spin" />
               )}
               {status === "success" && <Check size={18} />}
               {status === "error" && <XCircle size={18} />}

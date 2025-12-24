@@ -1,4 +1,6 @@
+// src/components/common/Pagination.jsx
 import React from "react";
+import { Loader2 } from "lucide-react";
 
 const Pagination = ({
   currentPage,
@@ -7,6 +9,7 @@ const Pagination = ({
   onPageChange,
   className = "",
   maxVisiblePages = 5,
+  isLoading = false,
 }) => {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   if (totalPages <= 1) return null;
@@ -15,11 +18,15 @@ const Pagination = ({
   const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
   const handlePrevious = () => {
-    if (currentPage > 1) onPageChange(currentPage - 1);
+    if (currentPage > 1 && !isLoading) onPageChange(currentPage - 1);
   };
 
   const handleNext = () => {
-    if (currentPage < totalPages) onPageChange(currentPage + 1);
+    if (currentPage < totalPages && !isLoading) onPageChange(currentPage + 1);
+  };
+
+  const handlePageClick = (page) => {
+    if (!isLoading) onPageChange(page);
   };
 
   /* Visible page calculation */
@@ -43,75 +50,113 @@ const Pagination = ({
         px-4 py-3
         bg-white border border-slate-200 rounded-xl shadow-sm
         text-xs sm:text-sm
+        ${isLoading ? "opacity-75" : ""}
+        transition-opacity duration-300
         ${className}
       `}
     >
       {/* Info */}
-      <div className="text-slate-600 font-medium">
-        Showing
-        <span className="mx-1 text-slate-900">
-          {startIndex}–{endIndex}
+      <div className="flex items-center gap-2 text-slate-600 font-medium">
+        {isLoading && (
+          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+        )}
+        <span>
+          Showing
+          <span className="mx-1 text-slate-900">
+            {isLoading ? "..." : `${startIndex}–${endIndex}`}
+          </span>
+          of
+          <span className="mx-1 text-slate-900">
+            {isLoading ? "..." : totalItems}
+          </span>
+          entries
+          {isLoading && " (loading...)"}
         </span>
-        of
-        <span className="mx-1 text-slate-900">
-          {totalItems}
-        </span>
-        entries
       </div>
 
       {/* Pagination Controls */}
       <div className="flex items-center gap-1">
-        {/* Previous */}
+        {/* Previous Button */}
         <button
           onClick={handlePrevious}
-          disabled={currentPage === 1}
-          className="
+          disabled={currentPage === 1 || isLoading}
+          className={`
             flex items-center gap-1
             px-3 py-2 rounded-lg
             border border-slate-300
-            bg-white text-slate-700 font-medium
-            hover:bg-slate-50
+            font-medium
+            transition-all duration-200
             disabled:opacity-40 disabled:cursor-not-allowed
-            transition
-          "
+            ${
+              isLoading
+                ? "cursor-wait bg-slate-50 text-slate-400"
+                : "bg-white text-slate-700 hover:bg-slate-50"
+            }
+          `}
         >
-          ← <span>Previous</span>
+          {isLoading && currentPage > 1 ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            "←"
+          )}
+          <span>Previous</span>
         </button>
 
         {/* Page Numbers */}
         {pages.map((page) => (
           <button
             key={page}
-            onClick={() => onPageChange(page)}
+            onClick={() => handlePageClick(page)}
+            disabled={isLoading}
             className={`
+              relative
               px-3 py-2 rounded-lg font-medium
-              transition
+              transition-all duration-200
+              disabled:cursor-wait
               ${
                 page === currentPage
-                  ? "bg-primary text-white shadow-sm"
-                  : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : `bg-white text-slate-700 border border-slate-300 ${
+                      isLoading
+                        ? "hover:bg-slate-50"
+                        : "hover:bg-slate-50 hover:border-slate-400"
+                    }`
               }
             `}
           >
-            {page}
+            {isLoading && page === currentPage && (
+              <Loader2 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-white" />
+            )}
+            <span className={isLoading && page === currentPage ? "invisible" : ""}>
+              {page}
+            </span>
           </button>
         ))}
 
-        {/* Next */}
+        {/* Next Button */}
         <button
           onClick={handleNext}
-          disabled={currentPage === totalPages}
-          className="
+          disabled={currentPage === totalPages || isLoading}
+          className={`
             flex items-center gap-1
             px-3 py-2 rounded-lg
             border border-slate-300
-            bg-white text-slate-700 font-medium
-            hover:bg-slate-50
+            font-medium
+            transition-all duration-200
             disabled:opacity-40 disabled:cursor-not-allowed
-            transition
-          "
+            ${
+              isLoading
+                ? "cursor-wait bg-slate-50 text-slate-400"
+                : "bg-white text-slate-700 hover:bg-slate-50"
+            }
+          `}
         >
-          <span>Next</span> →
+          <span>Next</span>
+          {isLoading && currentPage < totalPages ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            "→"
+          )}
         </button>
       </div>
     </div>

@@ -6,6 +6,7 @@ const DataTable = ({
   columns,
   data,
   itemsPerPage = 7,
+  isLoading = false,
   onRowClick,
   className = "",
 }) => {
@@ -89,6 +90,7 @@ const DataTable = ({
         itemsPerPage={itemsPerPage}
         onPageChange={setCurrentPage}
         className="border-t"
+         isLoading={isLoading} // Add this line
       />
     </div>
   );
