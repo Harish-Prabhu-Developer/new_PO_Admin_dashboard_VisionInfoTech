@@ -25,7 +25,7 @@ export const addPODetail2Data = async (req: Request, res: Response) => {
     }
 
     // Check if PO header exists
-    const checkHeaderQuery = `SELECT 1 FROM public.tbl_purchase_order_hdr WHERE po_ref_no = $1`;
+    const checkHeaderQuery = `SELECT 1 FROM tbl_purchase_order_hdr WHERE po_ref_no = $1`;
     const headerCheck = await pool.query(checkHeaderQuery, [po_ref_no.trim()]);
     
     if (headerCheck.rows.length === 0) {
@@ -71,7 +71,7 @@ export const addPODetail2Data = async (req: Request, res: Response) => {
     }
 
     const query = `
-      INSERT INTO public.tbl_purchase_order_additional_cost_details(
+      INSERT INTO tbl_purchase_order_additional_cost_details(
         po_ref_no,
         additional_cost_type,
         amount,
@@ -190,7 +190,7 @@ export const getAllPODetail2s = async (req: Request, res: Response) => {
         modified_by,
         modified_date,
         modified_mac_address
-      FROM public.tbl_purchase_order_additional_cost_details
+      FROM tbl_purchase_order_additional_cost_details
       WHERE 1=1
     `;
     
@@ -286,7 +286,7 @@ export const getAllPODetail2s = async (req: Request, res: Response) => {
     const { rows } = await pool.query(query, values);
     
     // Get total count for pagination
-    let countQuery = `SELECT COUNT(*) as total FROM public.tbl_purchase_order_additional_cost_details WHERE 1=1`;
+    let countQuery = `SELECT COUNT(*) as total FROM tbl_purchase_order_additional_cost_details WHERE 1=1`;
     const countValues: any[] = [];
     let countParam = 1;
     
@@ -345,7 +345,7 @@ export const getAllPODetail2s = async (req: Request, res: Response) => {
           MIN(amount) as min_amount,
           MAX(amount) as max_amount,
           AVG(amount) as average_amount
-        FROM public.tbl_purchase_order_additional_cost_details
+        FROM tbl_purchase_order_additional_cost_details
         WHERE po_ref_no = $1
       `;
       const statsResult = await pool.query(statsQuery, [po_ref_no.trim()]);
@@ -399,7 +399,7 @@ export const getPODetail2ById = async (req: Request, res: Response) => {
         modified_by,
         modified_date,
         modified_mac_address
-      FROM public.tbl_purchase_order_additional_cost_details
+      FROM tbl_purchase_order_additional_cost_details
       WHERE sno = $1
     `;
 
@@ -528,7 +528,7 @@ export const updatePODetail2ById = async (req: Request, res: Response) => {
     values.push(Number(id));
 
     const query = `
-      UPDATE public.tbl_purchase_order_additional_cost_details
+      UPDATE tbl_purchase_order_additional_cost_details
       SET ${updateFields.join(', ')}
       WHERE sno = $${paramCounter}
       RETURNING *
@@ -584,7 +584,7 @@ export const deletePODetail2ById = async (req: Request, res: Response) => {
     }
 
     const query = `
-      DELETE FROM public.tbl_purchase_order_additional_cost_details
+      DELETE FROM tbl_purchase_order_additional_cost_details
       WHERE sno = $1
       RETURNING *
     `;
@@ -637,7 +637,7 @@ export const getAdditionalCostsByRefNo = async (req: Request, res: Response) => 
     }
 
     // Check if PO exists
-    const checkHeaderQuery = `SELECT 1 FROM public.tbl_purchase_order_hdr WHERE po_ref_no = $1`;
+    const checkHeaderQuery = `SELECT 1 FROM tbl_purchase_order_hdr WHERE po_ref_no = $1`;
     const headerCheck = await pool.query(checkHeaderQuery, [po_ref_no.trim()]);
     
     if (headerCheck.rows.length === 0) {
@@ -656,7 +656,7 @@ export const getAdditionalCostsByRefNo = async (req: Request, res: Response) => 
         status_master,
         created_by,
         created_date
-      FROM public.tbl_purchase_order_additional_cost_details
+      FROM tbl_purchase_order_additional_cost_details
       WHERE po_ref_no = $1
       ORDER BY sno
     `;
@@ -668,7 +668,7 @@ export const getAdditionalCostsByRefNo = async (req: Request, res: Response) => 
       SELECT 
         COUNT(*) as count,
         COALESCE(SUM(amount), 0) as total_amount
-      FROM public.tbl_purchase_order_additional_cost_details
+      FROM tbl_purchase_order_additional_cost_details
       WHERE po_ref_no = $1
     `;
     const totalResult = await pool.query(totalQuery, [po_ref_no.trim()]);

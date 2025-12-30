@@ -128,7 +128,7 @@ export const addPODetail1Data = async (req: Request, res: Response) => {
     }
 
     const query = `
-      INSERT INTO public.tbl_purchase_order_dtl(
+      INSERT INTO tbl_purchase_order_dtl(
         po_ref_no,
         request_store_id,
         po_request_ref_no,
@@ -317,7 +317,7 @@ export const getAllPODetail1s = async (req: Request, res: Response) => {
         lc_no,
         truck_id,
         trailer_id
-      FROM public.tbl_purchase_order_dtl
+      FROM tbl_purchase_order_dtl
       WHERE 1=1
     `;
     
@@ -402,7 +402,7 @@ export const getAllPODetail1s = async (req: Request, res: Response) => {
     const { rows } = await pool.query(query, values);
     
     // Get total count for pagination
-    let countQuery = `SELECT COUNT(*) as total FROM public.tbl_purchase_order_dtl WHERE 1=1`;
+    let countQuery = `SELECT COUNT(*) as total FROM tbl_purchase_order_dtl WHERE 1=1`;
     const countValues: any[] = [];
     let countParam = 1;
     
@@ -454,7 +454,7 @@ export const getAllPODetail1s = async (req: Request, res: Response) => {
           COALESCE(SUM(total_pcs), 0) as total_quantity,
           COALESCE(SUM(final_product_amount), 0) as total_amount,
           COALESCE(AVG(rate_per_pcs), 0) as average_rate
-        FROM public.tbl_purchase_order_dtl
+        FROM tbl_purchase_order_dtl
         WHERE po_ref_no = $1
       `;
       const statsResult = await pool.query(statsQuery, [po_ref_no.trim()]);
@@ -495,7 +495,7 @@ export const getPODetail1ById = async (req: Request, res: Response) => {
 
     const query = `
       SELECT *
-      FROM public.tbl_purchase_order_dtl
+      FROM tbl_purchase_order_dtl
       WHERE sno = $1
     `;
 
@@ -667,7 +667,7 @@ export const updatePODetail1ById = async (req: Request, res: Response) => {
     values.push(Number(id));
 
     const query = `
-      UPDATE public.tbl_purchase_order_dtl
+      UPDATE tbl_purchase_order_dtl
       SET ${updateFields.join(', ')}
       WHERE sno = $${paramCounter}
       RETURNING *
@@ -711,7 +711,7 @@ export const deletePODetail1ById = async (req: Request, res: Response) => {
     }
 
     const query = `
-      DELETE FROM public.tbl_purchase_order_dtl
+      DELETE FROM tbl_purchase_order_dtl
       WHERE sno = $1
       RETURNING *
     `;
@@ -754,7 +754,7 @@ export const getPODetailsByRefNo = async (req: Request, res: Response) => {
 
     const query = `
       SELECT *
-      FROM public.tbl_purchase_order_dtl
+      FROM tbl_purchase_order_dtl
       WHERE po_ref_no = $1
       ORDER BY sno
     `;

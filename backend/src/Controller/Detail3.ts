@@ -26,7 +26,7 @@ export const addPODetail3Data = async (req: Request, res: Response) => {
     }
 
     // Check if PO header exists
-    const checkHeaderQuery = `SELECT 1 FROM public.tbl_purchase_order_hdr WHERE po_ref_no = $1`;
+    const checkHeaderQuery = `SELECT 1 FROM tbl_purchase_order_hdr WHERE po_ref_no = $1`;
     const headerCheck = await pool.query(checkHeaderQuery, [po_ref_no.trim()]);
     
     if (headerCheck.rows.length === 0) {
@@ -680,7 +680,7 @@ export const getPODetail3ByRefNo = async (req: Request, res: Response) => {
     }
 
     // Check if PO exists
-    const checkHeaderQuery = `SELECT 1 FROM public.tbl_purchase_order_hdr WHERE po_ref_no = $1`;
+    const checkHeaderQuery = `SELECT 1 FROM tbl_purchase_order_hdr WHERE po_ref_no = $1`;
     const headerCheck = await pool.query(checkHeaderQuery, [po_ref_no.trim()]);
     
     if (headerCheck.rows.length === 0) {
