@@ -1,0 +1,1766 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Purchase Order (PO) Admin Dashboard API",
+    "description": "Comprehensive API documentation for the Purchase Order Admin Dashboard system. This API manages purchase order headers, details, and related information.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "HARISH PRABHU",
+      "email": "harishpraharshu@gmail.com"
+    },
+    "license": {
+      "name": "ISC"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development Server"
+    },
+    {
+      "url": "http://localhost:5000",
+      "description": "Development Server"
+    },
+    {
+      "url": "http://192.168.29.216:3000",
+      "description": "Development Server"
+    }
+  ],
+  "basePath": "/api/v1",
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Welcome endpoint",
+        "description": "Returns a welcome message with server information",
+        "tags": ["General"],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Welcome to the API"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "environment": {
+                      "type": "string",
+                      "example": "development"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check endpoint",
+        "description": "Checks the health status of the API and database connection",
+        "tags": ["General"],
+        "responses": {
+          "200": {
+            "description": "API and database are healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "OK"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "connected"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable - database disconnected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "Service Unavailable"
+                    },
+                    "database": {
+                      "type": "string",
+                      "example": "disconnected"
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/po/header/po-headers": {
+      "post": {
+        "summary": "Create a new Purchase Order Header",
+        "description": "Add a new purchase order header with required information",
+        "tags": ["PO Header"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["po_ref_no", "po_date", "company_id", "supplier_id", "created_by"],
+                "properties": {
+                  "po_ref_no": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "Purchase Order Reference Number"
+                  },
+                  "po_date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Date of the Purchase Order"
+                  },
+                  "purchase_type": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "description": "Type of purchase (optional)"
+                  },
+                  "company_id": {
+                    "type": "integer",
+                    "description": "Company ID"
+                  },
+                  "supplier_id": {
+                    "type": "integer",
+                    "description": "Supplier ID"
+                  },
+                  "po_store_id": {
+                    "type": "integer",
+                    "description": "Store ID (optional)"
+                  },
+                  "remarks": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "description": "Additional remarks (optional)"
+                  },
+                  "created_by": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "User who created the record"
+                  },
+                  "created_mac_address": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "MAC address of the creating machine (optional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Purchase Order Header created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "PO Header created successfully"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "get": {
+        "summary": "Get all Purchase Order Headers",
+        "description": "Retrieve all purchase order headers with pagination",
+        "tags": ["PO Header"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Number of records per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of purchase order headers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/header/po-headers/{po_ref_no}": {
+      "get": {
+        "summary": "Get a specific Purchase Order Header",
+        "description": "Retrieve a purchase order header by reference number",
+        "tags": ["PO Header"],
+        "parameters": [
+          {
+            "name": "po_ref_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Purchase Order Reference Number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchase order header details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Purchase order header not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a Purchase Order Header",
+        "description": "Update an existing purchase order header",
+        "tags": ["PO Header"],
+        "parameters": [
+          {
+            "name": "po_ref_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Purchase Order Reference Number"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "po_date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "purchase_type": {
+                    "type": "string"
+                  },
+                  "company_id": {
+                    "type": "integer"
+                  },
+                  "supplier_id": {
+                    "type": "integer"
+                  },
+                  "po_store_id": {
+                    "type": "integer"
+                  },
+                  "remarks": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purchase order header updated successfully"
+          },
+          "404": {
+            "description": "Purchase order header not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a Purchase Order Header",
+        "description": "Delete a purchase order header by reference number",
+        "tags": ["PO Header"],
+        "parameters": [
+          {
+            "name": "po_ref_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Purchase Order Reference Number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchase order header deleted successfully"
+          },
+          "404": {
+            "description": "Purchase order header not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail1/po-details1": {
+      "post": {
+        "summary": "Create a new Purchase Order Detail (Type 1)",
+        "description": "Add a new purchase order detail with product information",
+        "tags": ["PO Detail 1"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["po_ref_no", "created_by"],
+                "properties": {
+                  "po_ref_no": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "Purchase Order Reference Number"
+                  },
+                  "request_store_id": {
+                    "type": "integer",
+                    "description": "Request Store ID (optional)"
+                  },
+                  "po_request_ref_no": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "PO Request Reference Number (optional)"
+                  },
+                  "proforma_invoice_ref_no": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "Proforma Invoice Reference Number (optional)"
+                  },
+                  "section_id": {
+                    "type": "integer",
+                    "description": "Section ID (optional)"
+                  },
+                  "machine_id": {
+                    "type": "integer",
+                    "description": "Machine ID (optional)"
+                  },
+                  "main_category_id": {
+                    "type": "integer",
+                    "description": "Main Category ID (optional)"
+                  },
+                  "sub_category_id": {
+                    "type": "integer",
+                    "description": "Sub Category ID (optional)"
+                  },
+                  "product_id": {
+                    "type": "integer",
+                    "description": "Product ID (optional)"
+                  },
+                  "packing_type": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "Type of packing (optional)"
+                  },
+                  "no_pcs_per_packing": {
+                    "type": "number",
+                    "description": "Number of pieces per packing (optional)"
+                  },
+                  "total_pcs": {
+                    "type": "number",
+                    "description": "Total pieces (optional)"
+                  },
+                  "total_packing": {
+                    "type": "number",
+                    "description": "Total packing units (optional)"
+                  },
+                  "rate_per_pcs": {
+                    "type": "number",
+                    "description": "Rate per piece (optional)"
+                  },
+                  "product_amount": {
+                    "type": "number",
+                    "description": "Product amount (optional)"
+                  },
+                  "discount_percentage": {
+                    "type": "number",
+                    "description": "Discount percentage (optional)"
+                  },
+                  "discount_amount": {
+                    "type": "number",
+                    "description": "Discount amount (optional)"
+                  },
+                  "total_product_amount": {
+                    "type": "number",
+                    "description": "Total product amount (optional)"
+                  },
+                  "vat_percentage": {
+                    "type": "number",
+                    "description": "VAT percentage (optional)"
+                  },
+                  "vat_amount": {
+                    "type": "number",
+                    "description": "VAT amount (optional)"
+                  },
+                  "final_product_amount": {
+                    "type": "number",
+                    "description": "Final product amount (optional)"
+                  },
+                  "remarks": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "description": "Remarks (optional)"
+                  },
+                  "created_by": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "User who created the record"
+                  },
+                  "created_mac_address": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "MAC address (optional)"
+                  },
+                  "alternate_product_name": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Alternate product name (optional)"
+                  },
+                  "lc_needed_status": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "LC needed status (optional)"
+                  },
+                  "lc_apply_status": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "LC apply status (optional)"
+                  },
+                  "lc_applied_date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "LC applied date (optional)"
+                  },
+                  "lc_no": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "LC number (optional)"
+                  },
+                  "sup_doc_file": {
+                    "type": "string",
+                    "description": "Supporting document file (optional)"
+                  },
+                  "truck_id": {
+                    "type": "integer",
+                    "description": "Truck ID (optional)"
+                  },
+                  "trailer_id": {
+                    "type": "integer",
+                    "description": "Trailer ID (optional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "PO Detail 1 created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" },
+                "example": {
+                  "message": "PO Detail 1 created successfully",
+                  "data": { "id": 1, "po_ref_no": "PO-2025-001", "product_id": 123 }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Validation error", "message": "po_ref_no is required", "statusCode": 400 }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Internal server error", "message": "Database error", "statusCode": 500 }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get all Purchase Order Details (Type 1)",
+        "description": "Retrieve all purchase order details with pagination",
+        "tags": ["PO Detail 1"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of PO Details 1"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail1/po-details1/ref/{po_ref_no}": {
+      "get": {
+        "summary": "Get PO Details (Type 1) by Reference Number",
+        "description": "Retrieve purchase order details by reference number",
+        "tags": ["PO Detail 1"],
+        "parameters": [
+          {
+            "name": "po_ref_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PO Details found"
+          },
+          "404": {
+            "description": "PO Details not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail1/po-details1/{id}": {
+      "get": {
+        "summary": "Get a specific Purchase Order Detail (Type 1)",
+        "description": "Retrieve a purchase order detail by ID",
+        "tags": ["PO Detail 1"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PO Detail 1 found"
+          },
+          "404": {
+            "description": "PO Detail 1 not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a Purchase Order Detail (Type 1)",
+        "description": "Update an existing purchase order detail",
+        "tags": ["PO Detail 1"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PO Detail 1 updated successfully"
+          },
+          "404": {
+            "description": "PO Detail 1 not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a Purchase Order Detail (Type 1)",
+        "description": "Delete a purchase order detail by ID",
+        "tags": ["PO Detail 1"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PO Detail 1 deleted successfully"
+          },
+          "404": {
+            "description": "PO Detail 1 not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail2/po-details2": {
+      "post": {
+        "summary": "Create a new Purchase Order Detail (Type 2)",
+        "description": "Add a new purchase order detail for additional costs",
+        "tags": ["PO Detail 2"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["po_ref_no", "created_by"],
+                "properties": {
+                  "po_ref_no": {
+                    "type": "string",
+                    "description": "Purchase Order Reference Number"
+                  },
+                  "created_by": {
+                    "type": "string",
+                    "description": "User who created the record"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "PO Detail 2 created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" },
+                "example": { "message": "PO Detail 2 created successfully", "data": { "id": 1, "po_ref_no": "PO-2025-001", "cost_type": "Shipping", "amount": 150.0 } }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Validation error", "message": "created_by is required", "statusCode": 400 }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Internal server error", "message": "Database error", "statusCode": 500 }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get all Purchase Order Details (Type 2)",
+        "description": "Retrieve all purchase order details (Type 2)",
+        "tags": ["PO Detail 2"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of PO Details 2"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail2/po-details2/ref/{po_ref_no}": {
+      "get": {
+        "summary": "Get Additional Costs by Reference Number",
+        "description": "Retrieve additional costs for a purchase order",
+        "tags": ["PO Detail 2"],
+        "parameters": [
+          {
+            "name": "po_ref_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Additional costs found"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail2/po-details2/{id}": {
+      "get": {
+        "summary": "Get a specific Purchase Order Detail (Type 2)",
+        "tags": ["PO Detail 2"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PO Detail 2 found"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a Purchase Order Detail (Type 2)",
+        "tags": ["PO Detail 2"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated successfully"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a Purchase Order Detail (Type 2)",
+        "tags": ["PO Detail 2"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail3/po-details3": {
+      "post": {
+        "summary": "Create a new Purchase Order Detail (Type 3)",
+        "description": "Add a new purchase order detail",
+        "tags": ["PO Detail 3"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["po_ref_no", "created_by"],
+                "properties": {
+                  "po_ref_no": {
+                    "type": "string",
+                    "description": "Purchase Order Reference Number"
+                  },
+                  "created_by": {
+                    "type": "string",
+                    "description": "User who created the record"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "PO Detail 3 created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" },
+                "example": { "message": "PO Detail 3 created successfully", "data": { "id": 1, "po_ref_no": "PO-2025-001", "notes": "Additional note" } }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Validation error", "message": "created_by is required", "statusCode": 400 }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Internal server error", "message": "Database error", "statusCode": 500 }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get all Purchase Order Details (Type 3)",
+        "description": "Retrieve all purchase order details (Type 3)",
+        "tags": ["PO Detail 3"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of PO Details 3"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail3/po-details3/ref/{po_ref_no}": {
+      "get": {
+        "summary": "Get PO Details (Type 3) by Reference Number",
+        "tags": ["PO Detail 3"],
+        "parameters": [
+          {
+            "name": "po_ref_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PO Details found"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail3/po-details3/{id}": {
+      "get": {
+        "summary": "Get a specific Purchase Order Detail (Type 3)",
+        "tags": ["PO Detail 3"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PO Detail 3 found"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a Purchase Order Detail (Type 3)",
+        "tags": ["PO Detail 3"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated successfully"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a Purchase Order Detail (Type 3)",
+        "tags": ["PO Detail 3"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail4/po-details4": {
+      "post": {
+        "summary": "Upload a Purchase Order File (Type 4)",
+        "description": "Add a new purchase order file upload with binary content",
+        "tags": ["PO Detail 4"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["po_ref_no", "file_name", "created_by", "file"],
+                "properties": {
+                  "po_ref_no": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "Purchase Order Reference Number"
+                  },
+                  "description_details": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "Description of the file (optional)"
+                  },
+                  "file_name": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "description": "Name of the file"
+                  },
+                  "content_type": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "MIME type of the file (optional)"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Binary file content"
+                  },
+                  "status_master": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "description": "Status of the file (optional, default: ACTIVE)"
+                  },
+                  "created_by": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "User who created the record"
+                  },
+                  "created_mac_address": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "MAC address of the creating machine (optional)"
+                  },
+                  "file_type": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "Type of file (optional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Purchase order file uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Purchase order file uploaded successfully"
+                    },
+                    "sno": {
+                      "type": "integer",
+                      "description": "Serial number of the uploaded file"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Invalid or missing required fields"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Failed to upload purchase order file"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get all Purchase Order Files (Type 4)",
+        "description": "Retrieve all purchase order files with pagination",
+        "tags": ["PO Detail 4"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number (default: 1)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Number of records per page (default: 50, max: 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of PO Files (Type 4)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PODetail4"
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "example": 50
+                        },
+                        "total": {
+                          "type": "integer",
+                          "description": "Total number of records"
+                        },
+                        "pages": {
+                          "type": "integer",
+                          "description": "Total number of pages"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Failed to fetch purchase order files"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/po/detail4/po-details4/{id}": {
+      "get": {
+        "summary": "Get a specific Purchase Order File by ID (Type 4)",
+        "description": "Retrieve a purchase order file including base64 content",
+        "tags": ["PO Detail 4"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "File ID (SNO)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PO File found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PODetail4"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid file ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Invalid file ID"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Purchase order file not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Purchase order file not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Failed to fetch purchase order file"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a Purchase Order File Metadata (Type 4)",
+        "description": "Update an existing purchase order file metadata (does not update binary content)",
+        "tags": ["PO Detail 4"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "File ID (SNO)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "PO_REF_NO": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "Purchase Order Reference Number"
+                  },
+                  "DESCRIPTION_DETAILS": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "Description of the file"
+                  },
+                  "STATUS_MASTER": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "description": "Status of the file"
+                  },
+                  "FILE_TYPE": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "Type of file"
+                  },
+                  "UPDATED_BY": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "User who updated the record"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Purchase order file updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Purchase order file updated successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PODetail4"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Invalid ID"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Purchase order file not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Purchase order file not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Failed to update purchase order file"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a Purchase Order File (Type 4)",
+        "description": "Delete a purchase order file by ID",
+        "tags": ["PO Detail 4"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "File ID (SNO)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchase order file deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Purchase order file deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid file ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Invalid file ID"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Purchase order file not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Purchase order file not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "Failed to delete purchase order file"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PODetail4": {
+        "type": "object",
+        "properties": {
+          "sno": {
+            "type": "integer",
+            "description": "Serial number"
+          },
+          "po_ref_no": {
+            "type": "string",
+            "description": "Purchase Order Reference Number"
+          },
+          "description_details": {
+            "type": ["string", "null"],
+            "description": "File description"
+          },
+          "file_name": {
+            "type": "string",
+            "description": "Name of the uploaded file"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "MIME type of the file"
+          },
+          "content_data": {
+            "type": "string",
+            "description": "Base64 encoded file content"
+          },
+          "status_master": {
+            "type": "string",
+            "description": "Status of the file"
+          },
+          "created_by": {
+            "type": ["string", "null"],
+            "description": "User who created the record"
+          },
+          "created_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation date"
+          },
+          "created_mac_address": {
+            "type": ["string", "null"],
+            "description": "MAC address of creating machine"
+          },
+          "file_type": {
+            "type": ["string", "null"],
+            "description": "Type of file"
+          },
+          "updated_by": {
+            "type": ["string", "null"],
+            "description": "User who last updated the record"
+          },
+          "updated_date": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Last update date"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "msg": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

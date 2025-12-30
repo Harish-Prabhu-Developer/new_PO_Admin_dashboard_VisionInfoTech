@@ -9,6 +9,7 @@ const DataTable = ({
   isLoading = false,
   onRowClick,
   className = "",
+  HeaderClassName="bg-yellow-200 border-b border-slate-300",
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -25,7 +26,7 @@ const DataTable = ({
         <table className="w-full text-sm">
           
           {/* Header */}
-          <thead className="bg-slate-50 border-b">
+          <thead className={HeaderClassName}>
             <tr>
               {columns.map((col) => (
                 <th
@@ -57,7 +58,7 @@ const DataTable = ({
           </thead>
 
           {/* Body */}
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-slate-300">
             {currentData.map((row, rowIndex) => (
               <tr
                 key={rowIndex}

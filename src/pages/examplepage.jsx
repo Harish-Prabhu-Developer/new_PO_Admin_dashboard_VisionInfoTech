@@ -1,5 +1,4 @@
 // src/pages/examplepage.jsx
-import React from "react";
 import Layout from "../Layout/layout";
 import SupplierInfo from "../components/SupplierInfo";
 import RemarksCard from "../components/RemarksCard";
@@ -28,28 +27,62 @@ import {
   IndianRupee,
   Percent,
   BadgeCheck,
-  Loader2,
 } from "lucide-react";
 import ModelForm from "../components/ModelForm";
-
 import { StatusBadge } from "../components/common/TableCell";
 
+// Redux imports
+import { useDispatch, useSelector } from "react-redux";
+import {
+  createPOHeader,
+  updatePOHeader,
+  fetchPOHeaderByRef,
+} from "../redux/Slice/PO/poHeaderSlice";
+import {
+  createPODetail1,
+  updatePODetail1,
+  deletePODetail1,
+  fetchPODetails1ByRef,
+} from "../redux/Slice/PO/poDetail1Slice";
+import {
+  createPODetail2,
+  updatePODetail2,
+  deletePODetail2,
+  fetchPODetails2ByRef,
+} from "../redux/Slice/PO/poDetail2Slice";
+import {
+  createPODetail3,
+  updatePODetail3,
+  deletePODetail3,
+  fetchPODetails3ByRef,
+} from "../redux/Slice/PO/poDetail3Slice";
+import {
+  createPODetail4,
+  updatePODetail4,
+  deletePODetail4,
+  fetchPODetails4,
+} from "../redux/Slice/PO/poDetail4Slice";
+
 const ExamplePage = () => {
+  const dispatch = useDispatch();
+  
+  // Redux selectors
+  const poHeaderState = useSelector((state) => state.poHeader);
+  const poDetail1State = useSelector((state) => state.poDetail1);
+  const poDetail2State = useSelector((state) => state.poDetail2);
+  const poDetail3State = useSelector((state) => state.poDetail3);
+  const poDetail4State = useSelector((state) => state.poDetail4);
+
+  // Local state
   const [activeTab, setActiveTab] = useState("Items");
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [isAllSelected, setIsAllSelected] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editingAttachment, setEditingAttachment] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [poRefNo, setPoRefNo] = useState("3517");
 
-  // Loading states
-  const [isLoadingItems, setIsLoadingItems] = useState(false);
-  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
-  const [isLoadingLogistics, setIsLoadingLogistics] = useState(false);
-  const [isLoadingSupplier, setIsLoadingSupplier] = useState(false);
-  const [isModalLoading, setIsModalLoading] = useState(false);
-
-  // Single state for the modal form
+  // Modal state
   const [modalForm, setModalForm] = useState({
     isOpen: false,
     title: "",
@@ -59,21 +92,102 @@ const ExamplePage = () => {
     onCloseCallback: null,
   });
 
-  // Simulate loading when tab changes
-  useEffect(() => {
-    if (activeTab === "Items") {
-      setIsLoadingItems(true);
-      setTimeout(() => setIsLoadingItems(false), 500);
-    } else if (activeTab === "Attachments") {
-      setIsLoadingAttachments(true);
-      setTimeout(() => setIsLoadingAttachments(false), 500);
-    } else if (activeTab === "Logistics") {
-      setIsLoadingLogistics(true);
-      setTimeout(() => setIsLoadingLogistics(false), 500);
-    }
-  }, [activeTab]);
+  // Loading states
+  const isLoadingItems = poDetail1State.status === "loading";
+  const isLoadingLogistics = poDetail2State.status === "loading";
+  const isLoadingAccounting = poDetail3State.status === "loading";
+  const isLoadingAttachments = poDetail4State.status === "loading";
 
-  // Open modal form helper
+  // Fetch data when component mounts or poRefNo changes
+  useEffect(() => {
+    if (poRefNo) {
+      Promise.all([
+        dispatch(fetchPOHeaderByRef(poRefNo)),
+        dispatch(fetchPODetails1ByRef(poRefNo)),
+        dispatch(fetchPODetails2ByRef(poRefNo)),
+        dispatch(fetchPODetails3ByRef(poRefNo)),
+      ]).catch((error) => {
+        console.error("Error fetching PO data:", error);
+      });
+    }
+  }, [poRefNo, dispatch]);
+
+  // Fetch attachments separately (paginated)
+  useEffect(() => {
+    dispatch(fetchPODetails4({ page: 1, limit: 50 }));
+  }, [dispatch]);
+
+  // Get data from Redux state - PO Detail 1 (Items)
+  const rows = useMemo(() => {
+    return poDetail1State.detailsByRef?.length > 0 
+      ? poDetail1State.detailsByRef.map((detail) => ({
+          id: detail.id || detail.sno || Math.random(),
+          item_no: detail.item_no || "",
+          description: detail.alternate_product_name || "",
+          whse: detail.request_store_id || "MAIN",
+          uom_code: detail.uom_code || "NOS",
+          quantity: parseFloat(detail.total_pcs) || 0,
+          unit_price: parseFloat(detail.rate_per_pcs) || 0,
+          discount: parseFloat(detail.discount_percentage) || 0,
+          tax_code: detail.vat_percentage ? `VAT${detail.vat_percentage}` : "GST18",
+          qc_remark: detail.remarks ? "OK" : "Pending",
+          price_after_discount: calculatePriceAfterDiscount(
+            parseFloat(detail.rate_per_pcs) || 0,
+            parseFloat(detail.discount_percentage) || 0
+          ),
+          total: parseFloat(detail.final_product_amount) || 0,
+        }))
+      : []
+  }, [poDetail1State.detailsByRef]);
+
+  // Get data from Redux state - PO Detail 4 (Attachments)
+  const attachmentsrows = useMemo(() => {
+    // Filter by current PO reference number
+    const filteredFiles = poDetail4State.files?.filter(
+      (file) => file.po_ref_no === poRefNo
+    ) || [];
+
+    return filteredFiles.length > 0
+      ? filteredFiles.map((file) => ({
+          id: file.sno || Math.random(),
+          po_ref_no: file.po_ref_no,
+          filename: file.file_name || "",
+          description_details: file.description_details || "",
+          content_type: file.content_type || "application/octet-stream",
+          status_master: file.status_master || "ACTIVE",
+          created_by: file.created_by || "",
+          created_date: file.created_date || "",
+          file_type: file.file_type || "DOCUMENT",
+        }))
+      : []
+  }, [poDetail4State.files, poRefNo]);
+
+  // Get PO header data
+  const poHeaderData = useMemo(() => {
+    return poHeaderState.header || {
+      supplier_name: "JOSEPHAT ANDREA SHAYO",
+      supplier_code: "LOCS100104",
+      contact_person: "JOSEPHAT",
+      po_ref_no: "3517",
+      status: "Open; Printed",
+      posting_date: "08.12.25",
+      delivery_date: "30.12.25",
+      document_date: "08.12.25",
+    };
+  }, [poHeaderState.header]);
+
+  // Helper functions
+  const calculatePriceAfterDiscount = (unitPrice, discount) => {
+    return unitPrice - (unitPrice * discount) / 100;
+  };
+
+  const calculateTotal = (quantity, unitPrice, discount = 0) => {
+    const subtotal = quantity * unitPrice;
+    const discountAmount = (subtotal * discount) / 100;
+    return subtotal - discountAmount;
+  };
+
+  // Modal management
   const openModalForm = ({ title, fields, submitText, onSubmit, onCloseCallback }) => {
     setModalForm({
       isOpen: true,
@@ -85,7 +199,6 @@ const ExamplePage = () => {
     });
   };
 
-  // Close modal form helper
   const closeModalForm = () => {
     if (modalForm.onCloseCallback) {
       modalForm.onCloseCallback();
@@ -103,359 +216,168 @@ const ExamplePage = () => {
     setSelectedFile(null);
   };
 
-  const [rows, setRows] = useState([
-    {
-      id: 1,
-      item_no: "ITM-0001",
-      description: "A4 Copier Paper 80 GSM",
-      whse: "MAIN",
-      uom_code: "PKT",
-      uom_name: "Packet",
-      quantity: 10,
-      unit_price: 250.0,
-      qty_whse: 325,
-      discount: 5,
-      tax_code: "GST18",
-      base_entry: 1001,
-      qc_remark: "OK",
-      price_after_discount: 237.5,
-      total: 2375.0,
-    },
-    {
-      id: 2,
-      item_no: "ITM-0002",
-      description: "Blue Ball Pen - 0.7mm",
-      whse: "MAIN",
-      uom_code: "BOX",
-      uom_name: "Box",
-      quantity: 5,
-      unit_price: 120.0,
-      qty_whse: 80,
-      discount: 0,
-      tax_code: "GST12",
-      base_entry: 1002,
-      qc_remark: "OK",
-      price_after_discount: 120.0,
-      total: 600.0,
-    },
-    {
-      id: 3,
-      item_no: "ITM-0003",
-      description: "Stapler Machine Medium",
-      whse: "ST02",
-      uom_code: "NOS",
-      uom_name: "Nos",
-      quantity: 2,
-      unit_price: 350.0,
-      qty_whse: 25,
-      discount: 10,
-      tax_code: "GST18",
-      base_entry: 1003,
-      qc_remark: "Packing dented",
-      price_after_discount: 315.0,
-      total: 630.0,
-    },
-    {
-      id: 4,
-      item_no: "ITM-0004",
-      description: "Brown Packing Tape 2 inch",
-      whse: "ST02",
-      uom_code: "ROL",
-      uom_name: "Roll",
-      quantity: 12,
-      unit_price: 45.0,
-      qty_whse: 140,
-      discount: 0,
-      tax_code: "GST18",
-      base_entry: 1004,
-      qc_remark: "OK",
-      price_after_discount: 45.0,
-      total: 540.0,
-    },
-    {
-      id: 5,
-      item_no: "ITM-0005",
-      description: "Corrugated Box 12x12x12",
-      whse: "MAIN",
-      uom_code: "NOS",
-      uom_name: "Nos",
-      quantity: 20,
-      unit_price: 60.0,
-      qty_whse: 200,
-      discount: 7.5,
-      tax_code: "GST18",
-      base_entry: 1005,
-      qc_remark: "Size verified",
-      price_after_discount: 55.5,
-      total: 1110.0,
-    },
-    {
-      id: 6,
-      item_no: "ITM-0006",
-      description: "Gel Pen Black - 0.5mm",
-      whse: "MAIN",
-      uom_code: "BOX",
-      uom_name: "Box",
-      quantity: 4,
-      unit_price: 150.0,
-      qty_whse: 60,
-      discount: 5,
-      tax_code: "GST12",
-      base_entry: 1006,
-      qc_remark: "OK",
-      price_after_discount: 142.5,
-      total: 570.0,
-    },
-    {
-      id: 7,
-      item_no: "ITM-0007",
-      description: "Highlighter Pen Assorted",
-      whse: "ST02",
-      uom_code: "PKT",
-      uom_name: "Packet",
-      quantity: 3,
-      unit_price: 220.0,
-      qty_whse: 35,
-      discount: 0,
-      tax_code: "GST18",
-      base_entry: 1007,
-      qc_remark: "Color checked",
-      price_after_discount: 220.0,
-      total: 660.0,
-    },
-    {
-      id: 8,
-      item_no: "ITM-0008",
-      description: "Spiral Notebook A5 200 Pages",
-      whse: "MAIN",
-      uom_code: "NOS",
-      uom_name: "Nos",
-      quantity: 15,
-      unit_price: 85.0,
-      qty_whse: 120,
-      discount: 10,
-      tax_code: "GST12",
-      base_entry: 1008,
-      qc_remark: "OK",
-      price_after_discount: 76.5,
-      total: 1147.5,
-    },
-    {
-      id: 9,
-      item_no: "ITM-0009",
-      description: "Whiteboard Marker Red",
-      whse: "ST02",
-      uom_code: "BOX",
-      uom_name: "Box",
-      quantity: 6,
-      unit_price: 180.0,
-      qty_whse: 48,
-      discount: 5,
-      tax_code: "GST18",
-      base_entry: 1009,
-      qc_remark: "Ink level checked",
-      price_after_discount: 171.0,
-      total: 1026.0,
-    },
-    {
-      id: 10,
-      item_no: "ITM-0010",
-      description: "Whiteboard Duster Magnetic",
-      whse: "MAIN",
-      uom_code: "NOS",
-      uom_name: "Nos",
-      quantity: 8,
-      unit_price: 95.0,
-      qty_whse: 40,
-      discount: 0,
-      tax_code: "GST18",
-      base_entry: 1010,
-      qc_remark: "OK",
-      price_after_discount: 95.0,
-      total: 760.0,
-    },
-    {
-      id: 11,
-      item_no: "ITM-0011",
-      description: "Office Scissors 8 inch",
-      whse: "ST02",
-      uom_code: "NOS",
-      uom_name: "Nos",
-      quantity: 5,
-      unit_price: 130.0,
-      qty_whse: 30,
-      discount: 7.5,
-      tax_code: "GST18",
-      base_entry: 1011,
-      qc_remark: "Blade sharp",
-      price_after_discount: 120.25,
-      total: 601.25,
-    },
-    {
-      id: 12,
-      item_no: "ITM-0012",
-      description: "Paper Clips 35mm",
-      whse: "MAIN",
-      uom_code: "BOX",
-      uom_name: "Box",
-      quantity: 12,
-      unit_price: 40.0,
-      qty_whse: 150,
-      discount: 5,
-      tax_code: "GST12",
-      base_entry: 1012,
-      qc_remark: "OK",
-      price_after_discount: 38.0,
-      total: 456.0,
-    },
-    {
-      id: 13,
-      item_no: "ITM-0013",
-      description: "Binder Clips Medium",
-      whse: "MAIN",
-      uom_code: "BOX",
-      uom_name: "Box",
-      quantity: 9,
-      unit_price: 75.0,
-      qty_whse: 90,
-      discount: 0,
-      tax_code: "GST18",
-      base_entry: 1013,
-      qc_remark: "OK",
-      price_after_discount: 75.0,
-      total: 675.0,
-    },
-    {
-      id: 14,
-      item_no: "ITM-0014",
-      description: "Sticky Notes 3x3 Yellow",
-      whse: "ST02",
-      uom_code: "PKT",
-      uom_name: "Packet",
-      quantity: 10,
-      unit_price: 60.0,
-      qty_whse: 110,
-      discount: 10,
-      tax_code: "GST12",
-      base_entry: 1014,
-      qc_remark: "Adhesive checked",
-      price_after_discount: 54.0,
-      total: 540.0,
-    },
-    {
-      id: 15,
-      item_no: "ITM-0015",
-      description: "Desk Organizer Plastic",
-      whse: "MAIN",
-      uom_code: "NOS",
-      uom_name: "Nos",
-      quantity: 4,
-      unit_price: 320.0,
-      qty_whse: 22,
-      discount: 5,
-      tax_code: "GST18",
-      base_entry: 1015,
-      qc_remark: "No cracks",
-      price_after_discount: 304.0,
-      total: 1216.0,
-    },
-  ]);
-  const [attachmentsrows, setAttachmentsRows] = useState([]);
-
-  // Handle calculate total
-  const calculateTotal = (quantity, unitPrice, discount = 0) => {
-    const subtotal = quantity * unitPrice;
-    const discountAmount = (subtotal * discount) / 100;
-    return subtotal - discountAmount;
-  };
-
-  // Handle supplier edit
+  // ==================== SUPPLIER HANDLERS ====================
   const handleSupplierEdit = async (data) => {
-    console.log("Updated Supplier:", data);
-    return new Promise((resolve) => {
-      setTimeout(resolve, 1500);
-    });
-  };
+    try {
+      const headerData = {
+        po_ref_no: poRefNo,
+        po_date: new Date().toISOString().split('T')[0],
+        company_id: 1,
+        supplier_id: 1,
+        purchase_type: "Standard",
+        remarks: data.remarks || "",
+        created_by: data.created_by || "Admin",
+        created_mac_address: data.created_mac_address || "",
+      };
 
-  // Handle add item
-  const handleAddItem = async (data) => {
-    const newItem = {
-      id: Math.max(...rows.map((r) => r.id), 0) + 1,
-      item_no: data.item_no,
-      description: data.description,
-      whse: data.whse,
-      uom_code: data.uom_code,
-      uom_name: data.uom_code,
-      quantity: parseFloat(data.quantity) || 0,
-      unit_price: parseFloat(data.unit_price) || 0,
-      qty_whse: 0,
-      discount: parseFloat(data.discount) || 0,
-      tax_code: data.tax_code || "GST18",
-      base_entry: 0,
-      qc_remark: data.qc_remark || "OK",
-      price_after_discount: 0,
-      total: 0,
-    };
-
-    // Calculate total
-    newItem.total = calculateTotal(
-      newItem.quantity,
-      newItem.unit_price,
-      newItem.discount
-    );
-    newItem.price_after_discount =
-      newItem.unit_price - (newItem.unit_price * newItem.discount) / 100;
-
-    setRows([...rows, newItem]);
-    console.log("Item Added:", newItem);
-    return new Promise((resolve) => {
-      setTimeout(resolve, 1500);
-    });
-  };
-
-  // Handle edit item
-  const handleEditItem = async (data) => {
-    if (!editingItem) return;
-
-    const updatedItem = {
-      ...editingItem,
-      item_no: data.item_no,
-      description: data.description,
-      whse: data.whse,
-      uom_code: data.uom_code,
-      quantity: parseFloat(data.quantity) || 0,
-      unit_price: parseFloat(data.unit_price) || 0,
-      discount: parseFloat(data.discount) || 0,
-      tax_code: data.tax_code || "GST18",
-      qc_remark: data.qc_remark || "OK",
-    };
-
-    // Recalculate total
-    updatedItem.total = calculateTotal(
-      updatedItem.quantity,
-      updatedItem.unit_price,
-      updatedItem.discount
-    );
-    updatedItem.price_after_discount =
-      updatedItem.unit_price -
-      (updatedItem.unit_price * updatedItem.discount) / 100;
-
-    setRows(rows.map((row) => (row.id === editingItem.id ? updatedItem : row)));
-    console.log("Item Updated:", updatedItem);
-    return new Promise((resolve) => {
-      setTimeout(resolve, 1500);
-    });
-  };
-
-  // Handle delete item
-  const handleDeleteItem = (itemId) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
-      setRows(rows.filter((row) => row.id !== itemId));
-      console.log("Item Deleted with ID:", itemId);
+      if (poHeaderState.header) {
+        await dispatch(updatePOHeader({
+          poRefNo: poRefNo,
+          headerData: headerData
+        })).unwrap();
+      } else {
+        await dispatch(createPOHeader(headerData)).unwrap();
+      }
+      
+      closeModalForm();
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error updating supplier:", error);
+      return Promise.reject(error);
     }
   };
 
-  // Handle row selection
+  // ==================== ITEM HANDLERS ====================
+  const handleAddItem = async (data) => {
+    try {
+      const detailData = {
+        po_ref_no: poRefNo,
+        item_no: data.item_no,
+        alternate_product_name: data.description,
+        request_store_id: 1,
+        total_pcs: parseFloat(data.quantity) || 0,
+        rate_per_pcs: parseFloat(data.unit_price) || 0,
+        discount_percentage: parseFloat(data.discount) || 0,
+        vat_percentage: parseFloat(data.tax_code?.replace('GST', '').replace('VAT', '')) || 0,
+        remarks: data.qc_remark || "OK",
+        created_by: "Admin",
+        created_mac_address: "",
+      };
+
+      await dispatch(createPODetail1(detailData)).unwrap();
+      closeModalForm();
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error adding item:", error);
+      return Promise.reject(error);
+    }
+  };
+
+  const handleEditItem = async (data) => {
+    if (!editingItem) return;
+
+    try {
+      const detailData = {
+        item_no: data.item_no,
+        alternate_product_name: data.description,
+        total_pcs: parseFloat(data.quantity) || 0,
+        rate_per_pcs: parseFloat(data.unit_price) || 0,
+        discount_percentage: parseFloat(data.discount) || 0,
+        vat_percentage: parseFloat(data.tax_code?.replace('GST', '').replace('VAT', '')) || 0,
+        remarks: data.qc_remark || "OK",
+      };
+
+      await dispatch(updatePODetail1({
+        id: editingItem.id,
+        detailData: detailData
+      })).unwrap();
+      
+      closeModalForm();
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error updating item:", error);
+      return Promise.reject(error);
+    }
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    if (window.confirm("Are you sure you want to delete this item?")) {
+      try {
+        await dispatch(deletePODetail1(itemId)).unwrap();
+        console.log("Item deleted successfully");
+      } catch (error) {
+        console.error("Error deleting item:", error);
+        alert("Failed to delete item. Please try again.");
+      }
+    }
+  };
+
+  // ==================== ATTACHMENT HANDLERS ====================
+  const handleAddAttachment = async (data) => {
+    try {
+      if (!selectedFile) {
+        alert("Please select a file to upload");
+        return Promise.reject("No file selected");
+      }
+
+      const formData = new FormData();
+      formData.append("po_ref_no", poRefNo);
+      formData.append("description_details", data.description_details || "");
+      formData.append("file_name", selectedFile.name);
+      formData.append("content_type", selectedFile.type || "application/octet-stream");
+      formData.append("status_master", data.status_master || "ACTIVE");
+      formData.append("created_by", data.created_by || "Admin");
+      formData.append("created_mac_address", data.created_mac_address || "");
+      formData.append("file_type", data.file_type || "DOCUMENT");
+      formData.append("file", selectedFile);
+
+      await dispatch(createPODetail4(formData)).unwrap();
+      closeModalForm();
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error adding attachment:", error);
+      return Promise.reject(error);
+    }
+  };
+
+  const handleEditAttachment = async (data) => {
+    if (!editingAttachment) return;
+
+    try {
+      const metadata = {
+        PO_REF_NO: data.po_ref_no || poRefNo,
+        DESCRIPTION_DETAILS: data.description_details || "",
+        STATUS_MASTER: data.status_master || "ACTIVE",
+        FILE_TYPE: data.file_type || "DOCUMENT",
+        UPDATED_BY: data.created_by || "Admin",
+      };
+
+      await dispatch(updatePODetail4({
+        id: editingAttachment.id,
+        metadata: metadata
+      })).unwrap();
+      
+      closeModalForm();
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error updating attachment:", error);
+      return Promise.reject(error);
+    }
+  };
+
+  const handleDeleteAttachment = async (id) => {
+    if (window.confirm("Delete this attachment?")) {
+      try {
+        await dispatch(deletePODetail4(id)).unwrap();
+        console.log("Attachment deleted successfully");
+      } catch (error) {
+        console.error("Error deleting attachment:", error);
+        alert("Failed to delete attachment. Please try again.");
+      }
+    }
+  };
+
+  // ==================== ROW SELECTION HANDLERS ====================
   const handleRowSelect = (rowId) => {
     const newSelected = new Set(selectedRows);
     if (newSelected.has(rowId)) {
@@ -467,7 +389,6 @@ const ExamplePage = () => {
     updateAllSelectedStatus(newSelected);
   };
 
-  // Handle select all
   const handleSelectAll = () => {
     if (isAllSelected) {
       setSelectedRows(new Set());
@@ -479,7 +400,6 @@ const ExamplePage = () => {
     }
   };
 
-  // Update all selected status
   const updateAllSelectedStatus = (selectedSet) => {
     const allRowIds = rows.map((row) => row.id);
     setIsAllSelected(
@@ -487,29 +407,24 @@ const ExamplePage = () => {
     );
   };
 
-  // Get selected rows data
-  const selectedRowsData = useMemo(() => {
-    return rows.filter((row) => selectedRows.has(row.id));
-  }, [selectedRows]);
-
-  // Field configurations
+  // ==================== FIELD CONFIGURATIONS ====================
   const supplierFields = [
     {
       name: "name",
       label: "Supplier Name",
-      defaultValue: "JOSEPHAT ANDREA SHAYO",
+      defaultValue: poHeaderData.supplier_name || "",
       required: true,
     },
     {
       name: "code",
       label: "Supplier Code",
-      defaultValue: "LOCS100104",
+      defaultValue: poHeaderData.supplier_code || "",
       required: true,
     },
     {
       name: "contact",
       label: "Contact Person",
-      defaultValue: "JOSEPHAT",
+      defaultValue: poHeaderData.contact_person || "",
     },
   ];
 
@@ -527,18 +442,6 @@ const ExamplePage = () => {
       required: true,
     },
     {
-      name: "whse",
-      label: "Warehouse",
-      placeholder: "MAIN",
-      required: true,
-    },
-    {
-      name: "uom_code",
-      label: "UOM Code",
-      placeholder: "PKT",
-      required: true,
-    },
-    {
       name: "quantity",
       label: "Quantity",
       type: "number",
@@ -547,7 +450,7 @@ const ExamplePage = () => {
     },
     {
       name: "unit_price",
-      label: "Unit Price",
+      label: "Unit Price (₹)",
       type: "number",
       placeholder: "0.00",
       required: true,
@@ -572,35 +475,39 @@ const ExamplePage = () => {
 
   const attachmentFields = [
     {
-      name: "path",
-      label: "Target Path",
-      placeholder: "/documents/po",
-      required: true,
+      name: "description_details",
+      label: "Description",
+      placeholder: "Enter file description",
     },
     {
-      name: "filename",
-      label: "File Name",
-      placeholder: "invoice.pdf",
-      required: true,
+      name: "file_type",
+      label: "File Type",
+      placeholder: "DOCUMENT",
     },
     {
-      name: "attachment_date",
-      label: "Attachment Date",
-      type: "date",
-      required: true,
+      name: "status_master",
+      label: "Status",
+      placeholder: "ACTIVE",
     },
     {
-      name: "free_text",
-      label: "Remarks",
-      placeholder: "Optional notes",
+      name: "created_by",
+      label: "Created By",
+      placeholder: "Admin",
+    },
+    {
+      name: "file",
+      label: "Select File",
+      type: "file",
+      required: true,
     },
   ];
 
   const attachmentColumns = [
-    { key: "path", label: "Target Path", icon: FolderTree },
     { key: "filename", label: "File Name", icon: FileText },
-    { key: "attachment_date", label: "Attachment Date", icon: Calendar },
-    { key: "free_text", label: "Free Text", icon: AlignLeft },
+    { key: "file_type", label: "Type", icon: FileText },
+    { key: "description_details", label: "Description", icon: AlignLeft },
+    { key: "status_master", label: "Status", icon: BadgeCheck },
+    { key: "created_date", label: "Date", icon: Calendar },
     {
       key: "actions",
       label: "Actions",
@@ -613,10 +520,12 @@ const ExamplePage = () => {
               setEditingAttachment(row);
               openModalForm({
                 title: "Edit Attachment",
-                fields: attachmentFields.map((f) => ({
-                  ...f,
-                  defaultValue: row[f.name] || "",
-                })),
+                fields: attachmentFields
+                  .filter((f) => f.name !== "file")
+                  .map((f) => ({
+                    ...f,
+                    defaultValue: row[f.name] || "",
+                  })),
                 submitText: "Update",
                 onSubmit: handleEditAttachment,
                 onCloseCallback: () => setEditingAttachment(null),
@@ -639,44 +548,6 @@ const ExamplePage = () => {
       ),
     },
   ];
-
-  const handleAddAttachment = async (data) => {
-    const newAttachment = {
-      id: Math.max(0, ...attachmentsrows.map((a) => a.id)) + 1,
-      path: data.path,
-      filename: data.filename,
-      attachment_date: data.attachment_date,
-      free_text: data.free_text || "",
-    };
-
-    setAttachmentsRows([...attachmentsrows, newAttachment]);
-    console.log("Attachment Added:", newAttachment);
-    return new Promise((resolve) => setTimeout(resolve, 800));
-  };
-
-  const handleEditAttachment = async (data) => {
-    if (!editingAttachment) return;
-
-    const updated = {
-      ...editingAttachment,
-      ...data,
-    };
-
-    setAttachmentsRows(
-      attachmentsrows.map((row) =>
-        row.id === editingAttachment.id ? updated : row
-      )
-    );
-
-    console.log("Attachment Updated:", updated);
-    return new Promise((resolve) => setTimeout(resolve, 800));
-  };
-
-  const handleDeleteAttachment = (id) => {
-    if (window.confirm("Delete this attachment?")) {
-      setAttachmentsRows(attachmentsrows.filter((a) => a.id !== id));
-    }
-  };
 
   const tabs = [
     { key: "Items", label: "Items", icon: Package },
@@ -714,12 +585,6 @@ const ExamplePage = () => {
       key: "description",
       label: "Description",
       icon: FileText,
-    },
-    {
-      key: "whse",
-      label: "Whse",
-      align: "text-right",
-      icon: Warehouse,
     },
     {
       key: "quantity",
@@ -813,6 +678,15 @@ const ExamplePage = () => {
     },
   ];
 
+  // Calculate summary statistics
+  const totalValue = rows.reduce((sum, row) => sum + row.total, 0);
+  const avgDiscount = rows.length > 0 
+    ? rows.reduce((sum, row) => sum + row.discount, 0) / rows.length 
+    : 0;
+  const qcPassRate = rows.length > 0
+    ? (rows.filter((row) => row.qc_remark === "OK").length / rows.length) * 100
+    : 0;
+
   return (
     <>
       <Layout
@@ -821,16 +695,16 @@ const ExamplePage = () => {
             <div className="flex-1 w-full">
               <SupplierInfo
                 supplier={{
-                  name: "JOSEPHAT ANDREA SHAYO",
-                  code: "LOCS100104",
-                  contact: "JOSEPHAT",
+                  name: poHeaderData.supplier_name,
+                  code: poHeaderData.supplier_code,
+                  contact: poHeaderData.contact_person,
                 }}
                 po={{
-                  "PO Number": "3517",
-                  Status: "Open; Printed",
-                  "Posting Date": "08.12.25",
-                  "Delivery Date": "30.12.25",
-                  "Document Date": "08.12.25",
+                  "PO Number": poHeaderData.po_ref_no,
+                  Status: poHeaderData.status,
+                  "Posting Date": poHeaderData.posting_date,
+                  "Delivery Date": poHeaderData.delivery_date,
+                  "Document Date": poHeaderData.document_date,
                 }}
                 onEdit={() => {
                   openModalForm({
@@ -849,11 +723,11 @@ const ExamplePage = () => {
             <RemarksCard remarks="For PFL AGRO1 stitching machine motor rewinding purpose." />
             <SummaryCard
               summary={[
-                { label: "Total Before Discount", value: "TZS 360,000.00" },
-                { label: "Discount", value: "0%" },
-                { label: "Freight", value: "TZS 0.00" },
-                { label: "Tax", value: "TZS 0.00" },
-                { label: "Total Payment Due", value: "TZS 360,000.00" },
+                { label: "Total Before Discount", value: `₹ ${totalValue.toFixed(2)}` },
+                { label: "Discount", value: `${avgDiscount.toFixed(1)}%` },
+                { label: "Freight", value: "₹ 0.00" },
+                { label: "Tax", value: "₹ 0.00" },
+                { label: "Total Payment Due", value: `₹ ${totalValue.toFixed(2)}` },
               ]}
             />
           </div>
@@ -864,8 +738,10 @@ const ExamplePage = () => {
           {/* Enhanced Tabs */}
           <div className="px-6 pt-4">
             {/* Add Item Button */}
-            <div className="flex items-center justify-between ">
-              <h3 className="text-lg font-semibold text-slate-900">Items</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {activeTab}
+              </h3>
               {activeTab === "Items" && (
                 <button
                   onClick={() => {
@@ -876,11 +752,48 @@ const ExamplePage = () => {
                       onSubmit: handleAddItem,
                     });
                   }}
-                  className="animate-fade-right animate-once animate-ease-out flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Add a new item"
+                  disabled={isLoadingItems}
                 >
-                  <Plus className="w-5 h-5" />
-                  <span>Add Item</span>
+                  {isLoadingItems ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Loading...
+                    </span>
+                  ) : (
+                    <>
+                      <Plus className="w-5 h-5" />
+                      <span>Add Item</span>
+                    </>
+                  )}
+                </button>
+              )}
+              {activeTab === "Attachments" && (
+                <button
+                  onClick={() => {
+                    setSelectedFile(null);
+                    openModalForm({
+                      title: "Add Attachment",
+                      fields: attachmentFields,
+                      submitText: "Upload Attachment",
+                      onSubmit: handleAddAttachment,
+                    });
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  disabled={isLoadingAttachments}
+                >
+                  {isLoadingAttachments ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      Add Attachment
+                    </>
+                  )}
                 </button>
               )}
             </div>
@@ -896,13 +809,14 @@ const ExamplePage = () => {
                 itemsPerPage={7}
                 onRowClick={(row) => console.log("Row clicked:", row)}
                 className="border-0"
+                loading={isLoadingItems}
               />
             )}
             {activeTab === "Logistics" && (
               <DataTable
                 columns={[
-                  { key: "key", label: "" },
-                  { key: "value", label: "" },
+                  { key: "key", label: "Field" },
+                  { key: "value", label: "Value" },
                 ]}
                 data={[
                   { key: "Ship To", value: "10974 KISONGO" },
@@ -917,6 +831,7 @@ const ExamplePage = () => {
                 ]}
                 itemsPerPage={7}
                 className="border"
+                loading={isLoadingLogistics}
               />
             )}
 
@@ -935,57 +850,41 @@ const ExamplePage = () => {
                 </div>
               </div>
             )}
+
             {activeTab === "Attachments" && (
               <>
-                <div className="flex justify-end px-4 py-2">
-                  <button
-                    onClick={() => {
-                      openModalForm({
-                        title: "Add Attachment",
-                        fields: attachmentFields,
-                        submitText: "Add Attachment",
-                        onSubmit: handleAddAttachment,
-                      });
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    <Plus size={16} />
-                    Add Attachment
-                  </button>
-                </div>
-
                 <DataTable
                   columns={attachmentColumns}
                   data={attachmentsrows}
                   itemsPerPage={7}
                   className="border-0"
+                  loading={isLoadingAttachments}
                 >
-                  <div className="flex flex-col items-center gap-3 text-center">
-                    <img
-                      src="https://placehold.co/180x100?text=No+Attachments"
-                      alt="No attachments"
-                      className="rounded-md opacity-80"
-                    />
-                    <p className="text-sm font-semibold text-slate-700">
-                      No attachments found
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Upload documents related to this purchase order.
-                    </p>
-                    <button
-                      onClick={() => {
-                        openModalForm({
-                          title: "Add Attachment",
-                          fields: attachmentFields,
-                          submitText: "Add Attachment",
-                          onSubmit: handleAddAttachment,
-                        });
-                      }}
-                      className="text-blue-600 text-xs font-medium"
-                    >
-                      Upload Attachment
-                    </button>
-                  </div>
+                  {attachmentsrows.length === 0 && !isLoadingAttachments && (
+                    <div className="flex flex-col items-center gap-3 text-center py-12">
+                      <Paperclip className="w-16 h-16 text-slate-300" />
+                      <p className="text-sm font-semibold text-slate-700">
+                        No attachments found
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Upload documents related to this purchase order.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setSelectedFile(null);
+                          openModalForm({
+                            title: "Add Attachment",
+                            fields: attachmentFields,
+                            submitText: "Upload Attachment",
+                            onSubmit: handleAddAttachment,
+                          });
+                        }}
+                        className="text-blue-600 text-xs font-medium hover:text-blue-700"
+                      >
+                        Upload Your First Attachment
+                      </button>
+                    </div>
+                  )}
                 </DataTable>
               </>
             )}
@@ -1011,7 +910,7 @@ const ExamplePage = () => {
               <div>
                 <p className="text-sm text-slate-600 mb-1">Total Value</p>
                 <p className="text-2xl font-bold text-slate-800">
-                  ₹ {rows.reduce((sum, row) => sum + row.total, 0).toFixed(2)}
+                  ₹ {totalValue.toFixed(2)}
                 </p>
               </div>
               <IndianRupee className="w-8 h-8 text-emerald-600" />
@@ -1023,11 +922,7 @@ const ExamplePage = () => {
               <div>
                 <p className="text-sm text-slate-600 mb-1">Avg Discount</p>
                 <p className="text-2xl font-bold text-slate-800">
-                  {(
-                    rows.reduce((sum, row) => sum + row.discount, 0) /
-                      rows.length || 0
-                  ).toFixed(1)}
-                  %
+                  {avgDiscount.toFixed(1)}%
                 </p>
               </div>
               <Percent className="w-8 h-8 text-amber-600" />
@@ -1039,12 +934,7 @@ const ExamplePage = () => {
               <div>
                 <p className="text-sm text-slate-600 mb-1">QC Pass Rate</p>
                 <p className="text-2xl font-bold text-slate-800">
-                  {(
-                    (rows.filter((row) => row.qc_remark === "OK").length /
-                      rows.length) *
-                    100
-                  ).toFixed(0)}
-                  %
+                  {qcPassRate.toFixed(0)}%
                 </p>
               </div>
               <BadgeCheck className="w-8 h-8 text-purple-600" />
@@ -1060,7 +950,16 @@ const ExamplePage = () => {
         title={modalForm.title}
         fields={modalForm.fields}
         submitText={modalForm.submitText}
-        onSubmit={modalForm.onSubmit}
+        onSubmit={async (data) => {
+          // Handle file input if present
+          const fileInput = document.querySelector('input[type="file"]');
+          if (fileInput?.files?.length > 0) {
+            setSelectedFile(fileInput.files[0]);
+          }
+          
+          // Call the modal's submit handler
+          return modalForm.onSubmit ? modalForm.onSubmit(data) : Promise.resolve();
+        }}
       />
     </>
   );

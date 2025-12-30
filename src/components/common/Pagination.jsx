@@ -1,6 +1,6 @@
 // src/components/common/Pagination.jsx
 import React from "react";
-import { Loader2 } from "lucide-react";
+import { Loader } from "lucide-react";
 
 const Pagination = ({
   currentPage,
@@ -58,7 +58,7 @@ const Pagination = ({
       {/* Info */}
       <div className="flex items-center gap-2 text-slate-600 font-medium">
         {isLoading && (
-          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+          <Loader className="w-4 h-4 animate-spin text-blue-500" />
         )}
         <span>
           Showing
@@ -95,7 +95,7 @@ const Pagination = ({
           `}
         >
           {isLoading && currentPage > 1 ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
+            <Loader className="w-3 h-3 animate-spin" />
           ) : (
             "←"
           )}
@@ -125,7 +125,7 @@ const Pagination = ({
             `}
           >
             {isLoading && page === currentPage && (
-              <Loader2 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-white" />
+              <Loader className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-white" />
             )}
             <span className={isLoading && page === currentPage ? "invisible" : ""}>
               {page}
@@ -153,7 +153,7 @@ const Pagination = ({
         >
           <span>Next</span>
           {isLoading && currentPage < totalPages ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
+            <Loader className="w-3 h-3 animate-spin" />
           ) : (
             "→"
           )}
