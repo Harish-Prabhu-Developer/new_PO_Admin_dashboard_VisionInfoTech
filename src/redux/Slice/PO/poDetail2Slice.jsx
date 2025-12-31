@@ -11,18 +11,16 @@ export const createPODetail2 = createAsyncThunk(
     try {
       const response = await axios.post(
         `${CONFIG.BASE_URL}/api/v1/po/detail2/po-details2`,
-        detailData,
-          
+        detailData
       );
       console.log("PO Detail 2 create Response:", response.data);
       return response.data;
     } catch (error) {
       console.error("PO Detail 2 create Error:", error);
-      return rejectWithValue(error.response?.data?.msg || "Failed to create PO detail 2");
+      return rejectWithValue(error.response?.data?.msg || error.response?.data?.error || "Failed to create PO detail 2");
     }
   }
 );
-
 // Get all PO Details 2
 export const fetchPODetails2 = createAsyncThunk(
   "poDetail2/fetchAll",

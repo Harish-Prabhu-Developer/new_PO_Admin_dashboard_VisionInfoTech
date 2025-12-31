@@ -28,7 +28,7 @@ export const createPODetail4 = createAsyncThunk(
       return response.data;
     } catch (error) {
       console.error("PO Detail 4 create Error:", error);
-      return rejectWithValue(error.response?.data?.msg || "Failed to upload PO file");
+      return rejectWithValue(error.response?.data?.msg || error.response?.data?.error || "Failed to upload PO file");
     }
   }
 );

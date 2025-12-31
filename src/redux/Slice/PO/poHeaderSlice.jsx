@@ -11,14 +11,13 @@ export const createPOHeader = createAsyncThunk(
     try {
       const response = await axios.post(
         `${CONFIG.BASE_URL}/api/v1/po/header/po-headers`,
-        headerData,
-         
+        headerData
       );
       console.log("PO Header create Response:", response.data);
       return response.data;
     } catch (error) {
       console.error("PO Header create Error:", error);
-      return rejectWithValue(error.response?.data?.msg || "Failed to create PO header");
+      return rejectWithValue(error.response?.data?.msg || error.response?.data?.error || "Failed to create PO header");
     }
   }
 );
@@ -47,14 +46,13 @@ export const fetchPOHeaderByRef = createAsyncThunk(
   async (poRefNo, { rejectWithValue }) => {
     try {
       const response = await axios.get(
-        `${CONFIG.BASE_URL}/api/v1/po/header/po-headers/${poRefNo}`,
-         
+        `${CONFIG.BASE_URL}/api/v1/po/header/po-headers/${poRefNo}`
       );
       console.log("PO Header fetch by ref Response:", response.data);
       return response.data;
     } catch (error) {
       console.error("PO Header fetch by ref Error:", error.message);
-      return rejectWithValue(error.response?.data?.msg || "Failed to fetch PO header");
+      return rejectWithValue(error.response?.data?.msg || error.response?.data?.error || "Failed to fetch PO header");
     }
   }
 );

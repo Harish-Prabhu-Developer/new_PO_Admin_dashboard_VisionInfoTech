@@ -1,9 +1,51 @@
 // src/components/ModelForm.jsx
-import React from "react";
-import { X } from "lucide-react";
+import React, { useState } from "react";
+import { X, Loader2 } from "lucide-react";
 
-const ModelForm = ({ open, onClose, title, children }) => {
-  if (!open) return null;
+const ModelForm = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  fields = [], 
+  submitText = "Submit", 
+  onSubmit,
+  isLoading = false
+}) => {
+  const [formData, setFormData] = useState({});
+  const [file, setFile] = useState(null);
+
+  if (!isOpen) return null;
+
+  const handleInputChange = (e) => {
+    const { name, value, type, files } = e.target;
+    
+    if (type === 'file') {
+      setFile(files[0]);
+      setFormData(prev => ({ ...prev, [name]: files[0]?.name || '' }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Prepare data for submission
+    const submissionData = { ...formData };
+    if (file) {
+      submissionData.file = file;
+    }
+    
+    try {
+      await onSubmit(submissionData);
+      // Reset form on successful submission
+      setFormData({});
+      setFile(null);
+      // Don't close automatically - let parent handle it
+    } catch (error) {
+      console.error("Form submission error:", error);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3">
@@ -18,15 +60,99 @@ const ModelForm = ({ open, onClose, title, children }) => {
             onClick={onClose}
             className="rounded-md p-1 text-slate-500 hover:bg-slate-100"
             type="button"
+            disabled={isLoading}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-5 overflow-y-auto">
-          {children}
-        </div>
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="p-5 space-y-4">
+            {fields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700">
+                  {field.label}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                
+                {field.type === 'textarea' ? (
+                  <textarea
+                    name={field.name}
+                    value={formData[field.name] || field.defaultValue || ''}
+                    onChange={handleInputChange}
+                    placeholder={field.placeholder}
+                    required={field.required}
+                    disabled={isLoading}
+                    rows={field.rows || 3}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
+                  />
+                ) : field.type === 'file' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      name={field.name}
+                      onChange={handleInputChange}
+                      required={field.required}
+                      disabled={isLoading}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100"
+                      accept={field.accept || "*/*"}
+                    />
+                    {file && (
+                      <p className="text-xs text-slate-600">
+                        Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <input
+                    type={field.type || 'text'}
+                    name={field.name}
+                    value={formData[field.name] || field.defaultValue || ''}
+                    onChange={handleInputChange}
+                    placeholder={field.placeholder}
+                    required={field.required}
+                    disabled={isLoading || field.disabled}
+                    min={field.min}
+                    max={field.max}
+                    step={field.step}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
+                  />
+                )}
+                
+                {field.description && (
+                  <p className="text-xs text-slate-500">{field.description}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 px-5 py-4 border-t bg-slate-50">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                submitText
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

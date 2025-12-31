@@ -31,6 +31,7 @@ const UsersPage = () => {
     purchase_type: "",
     company_id: "",
     supplier_id: "",
+    po_store_id:"",
     remarks: "",
     created_by: "ADMIN",
   });
@@ -49,6 +50,7 @@ const UsersPage = () => {
       purchase_type: "",
       company_id: "",
       supplier_id: "",
+      po_store_id:"",
       remarks: "",
       created_by: "ADMIN",
     });
@@ -63,8 +65,9 @@ const UsersPage = () => {
       purchase_type: row.purchase_type || "",
       company_id: row.company_id || "",
       supplier_id: row.supplier_id || "",
+      po_store_id: row.po_store_id || "",
       remarks: row.remarks || "",
-      created_by: "ADMIN",
+      created_by: row.created_by || "ADMIN" ,
     });
     setModalOpen(true);
   };
@@ -73,24 +76,28 @@ const UsersPage = () => {
     e.preventDefault();
 
     if (editing) {
-      const res = await dispatch(
-        updatePOHeader({
-          poRefNo: editing.po_ref_no,
-          headerData: form,
-        })
+      toast.promise(
+        dispatch(
+          updatePOHeader({
+            poRefNo: editing.po_ref_no,
+            headerData: form,
+          })
+        ),
+        {
+          loading: "Updating...",
+          success: <b>PO Header updated successfully!</b>,
+          error: (err) => <b>{err?.payload || 'Could not update PO Header.'}</b>,
+        }
       );
-      console.log("Update res : ",res);
-      
-      if (res.meta.requestStatus === "fulfilled") {
-        toast.success("PO Header updated successfully");
-      }
     } else {
-      const res = await dispatch(createPOHeader(form));
-      console.log("Create res : ",res);
-      
-      if (res.meta.requestStatus === "fulfilled") {
-        toast.success("PO Header created successfully");
-      }
+      toast.promise(
+        dispatch(createPOHeader(form)),
+        {
+          loading: "Creating...",
+          success: <b>PO Header created successfully!</b>,
+          error: (err) => <b>{err?.payload || 'Could not create PO Header.'}</b>,
+        }
+      );
     }
 
     setModalOpen(false);
@@ -102,17 +109,18 @@ const UsersPage = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!deleteRow) return;
 
-    const res = await dispatch(deletePOHeader(deleteRow.po_ref_no));
-    console.log("Delete res : ",res);
-    if (res.payload.msg === 'PO Header deleted successfully') {
-      toast.success("PO Header deleted successfully");
-    }
-    else{
-      toast.error("Failed to delete PO Header");
-    }
+    toast.promise(
+      dispatch(deletePOHeader(deleteRow.po_ref_no)),
+      {
+        loading: "Deleting...",
+        success: <b>PO Header deleted successfully!</b>,
+        error: (err) => <b>{err?.payload || 'Could not delete PO Header.'}</b>,
+      }
+    );
+
     setDeleteModalOpen(false);
     setDeleteRow(null);
   };
