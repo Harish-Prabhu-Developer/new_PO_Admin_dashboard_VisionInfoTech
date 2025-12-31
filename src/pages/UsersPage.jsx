@@ -10,6 +10,7 @@ import {
 import DataTable from "../components/DataTable";
 import { Plus, Pencil, Trash2, FileText } from "lucide-react";
 import ModelForm from "../components/ModelForm";
+import toast from "react-hot-toast";
 
 /* ---------- Main Page ---------- */
 const UsersPage = () => {
@@ -36,7 +37,7 @@ const UsersPage = () => {
 
   /* ---------- Fetch Data ---------- */
   useEffect(() => {
-    dispatch(fetchPOHeaders({ page: 1, limit: 20 }));
+      dispatch(fetchPOHeaders({ page: 1, limit: 20 }));
   }, [dispatch]);
 
   /* ---------- Add / Edit ---------- */
@@ -44,7 +45,7 @@ const UsersPage = () => {
     setEditing(null);
     setForm({
       po_ref_no: "",
-      po_date: "",
+      po_date: new Date().toISOString().split("T")[0],
       purchase_type: "",
       company_id: "",
       supplier_id: "",
@@ -58,7 +59,7 @@ const UsersPage = () => {
     setEditing(row);
     setForm({
       po_ref_no: row.po_ref_no,
-      po_date: row.po_date,
+      po_date: new Date(row.po_date).toISOString().split("T")[0] || "",
       purchase_type: row.purchase_type || "",
       company_id: row.company_id || "",
       supplier_id: row.supplier_id || "",
@@ -68,18 +69,28 @@ const UsersPage = () => {
     setModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (editing) {
-      dispatch(
+      const res = await dispatch(
         updatePOHeader({
           poRefNo: editing.po_ref_no,
           headerData: form,
         })
       );
+      console.log("Update res : ",res);
+      
+      if (res.meta.requestStatus === "fulfilled") {
+        toast.success("PO Header updated successfully");
+      }
     } else {
-      dispatch(createPOHeader(form));
+      const res = await dispatch(createPOHeader(form));
+      console.log("Create res : ",res);
+      
+      if (res.meta.requestStatus === "fulfilled") {
+        toast.success("PO Header created successfully");
+      }
     }
 
     setModalOpen(false);
@@ -91,11 +102,17 @@ const UsersPage = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteRow) return;
 
-    dispatch(deletePOHeader(deleteRow.po_ref_no));
-
+    const res = await dispatch(deletePOHeader(deleteRow.po_ref_no));
+    console.log("Delete res : ",res);
+    if (res.payload.msg === 'PO Header deleted successfully') {
+      toast.success("PO Header deleted successfully");
+    }
+    else{
+      toast.error("Failed to delete PO Header");
+    }
     setDeleteModalOpen(false);
     setDeleteRow(null);
   };
@@ -159,18 +176,6 @@ const UsersPage = () => {
         </button>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-600">
-          {error}
-          <button
-            onClick={() => dispatch(clearError())}
-            className="ml-2 underline"
-          >
-            clear
-          </button>
-        </div>
-      )}
 
       {/* Table */}
       <DataTable
@@ -229,6 +234,14 @@ const UsersPage = () => {
               value={form.supplier_id}
               onChange={(e) =>
                 setForm({ ...form, supplier_id: e.target.value })
+              }
+            />
+              <input
+              className="input"
+              placeholder="PO Store ID"
+              value={form.po_store_id}
+              onChange={(e) =>
+                setForm({ ...form, po_store_id: e.target.value })
               }
             />
           </div>

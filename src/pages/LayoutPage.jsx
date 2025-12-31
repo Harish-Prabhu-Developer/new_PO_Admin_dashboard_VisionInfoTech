@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -10,11 +10,16 @@ import {
   ChevronRight,
   LogOut
 } from 'lucide-react';
+import { useEffect } from 'react';
+import useUser from '../hooks/useUser';
+import toast from 'react-hot-toast';
 
 const LayoutPage = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+ 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const menuItems = [
     {
@@ -24,15 +29,23 @@ const LayoutPage = ({ children }) => {
       icon: <LayoutDashboard size={20} />,
       active: location.pathname === '/dashboard'
     },
+
     {
       id: 2,
+      name: 'Purchase Orders',
+      path: '/purchase_orders',
+      icon: <FileText size={20} />,
+      active: location.pathname === '/purchase_orders'
+    },
+    {
+      id: 3,
       name: 'Users',
       path: '/users',
       icon: <Users size={20} />,
       active: location.pathname === '/users'
     },
     {
-      id: 3,
+      id: 4,
       name: 'Examples',
       path: '/example',
       icon: <FileText size={20} />,
@@ -40,6 +53,9 @@ const LayoutPage = ({ children }) => {
     }
   ];
 
+
+ const { username } = useUser();
+  
   // Close mobile sidebar when clicking outside
   const handleOverlayClick = () => {
     setIsMobileSidebarOpen(false);
@@ -141,11 +157,16 @@ const LayoutPage = ({ children }) => {
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 rounded-full bg-linear-to-r from-blue-500 to-purple-500"></div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">John Doe</p>
-                    <p className="text-xs text-gray-400 truncate">Admin</p>
+                    <p className="text-sm font-medium truncate">{username}</p>
+                    {/* <p className="text-xs text-gray-400 truncate">Admin</p> */}
                   </div>
                 </div>
-                <button className="p-2 rounded-lg hover:bg-gray-700 transition-colors">
+                <button className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
+                        onClick={()=>{
+                          localStorage.removeItem('username');
+                          navigate('/');
+                          toast.success('Logout successfully');
+                        }}>
                   <LogOut size={18} />
                 </button>
               </>
@@ -190,8 +211,8 @@ const LayoutPage = ({ children }) => {
               
               <div className="hidden md:flex items-center space-x-3">
                 <div className="text-right">
-                  <p className="text-sm font-medium">John Doe</p>
-                  <p className="text-xs text-gray-500">Administrator</p>
+                  <p className="text-sm font-medium">{username}</p>
+                  {/* <p className="text-xs text-gray-500">Administrator</p> */}
                 </div>
                 <div className="w-10 h-10 rounded-full bg-linear-to-r from-blue-500 to-purple-500"></div>
               </div>
@@ -200,7 +221,7 @@ const LayoutPage = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <div className="p-6">
+        <div className="p-2">
           {children || <Outlet />}
         </div>
       </main>

@@ -53,7 +53,7 @@ export const fetchPOHeaderByRef = createAsyncThunk(
       console.log("PO Header fetch by ref Response:", response.data);
       return response.data;
     } catch (error) {
-      console.error("PO Header fetch by ref Error:", error);
+      console.error("PO Header fetch by ref Error:", error.message);
       return rejectWithValue(error.response?.data?.msg || "Failed to fetch PO header");
     }
   }
@@ -72,7 +72,7 @@ export const updatePOHeader = createAsyncThunk(
       console.log("PO Header update Response:", response.data);
       return response.data;
     } catch (error) {
-      console.error("PO Header update Error:", error);
+      console.error("PO Header update Error:", error.message);
       return rejectWithValue(error.response?.data?.msg || "Failed to update PO header");
     }
   }
@@ -90,7 +90,7 @@ export const deletePOHeader = createAsyncThunk(
       console.log("PO Header delete Response:", response.data);
       return response.data;
     } catch (error) {
-      console.error("PO Header delete Error:", error);
+      console.error("PO Header delete Error:", error.message);
       return rejectWithValue(error.response?.data?.msg || "Failed to delete PO header");
     }
   }

@@ -65,7 +65,7 @@ import {
 
 const ExamplePage = () => {
   const dispatch = useDispatch();
-  
+
   // Redux selectors
   const poHeaderState = useSelector((state) => state.poHeader);
   const poDetail1State = useSelector((state) => state.poDetail1);
@@ -119,7 +119,7 @@ const ExamplePage = () => {
 
   // Get data from Redux state - PO Detail 1 (Items)
   const rows = useMemo(() => {
-    return poDetail1State.detailsByRef?.length > 0 
+    return poDetail1State.detailsByRef?.length > 0
       ? poDetail1State.detailsByRef.map((detail) => ({
           id: detail.id || detail.sno || Math.random(),
           item_no: detail.item_no || "",
@@ -129,7 +129,9 @@ const ExamplePage = () => {
           quantity: parseFloat(detail.total_pcs) || 0,
           unit_price: parseFloat(detail.rate_per_pcs) || 0,
           discount: parseFloat(detail.discount_percentage) || 0,
-          tax_code: detail.vat_percentage ? `VAT${detail.vat_percentage}` : "GST18",
+          tax_code: detail.vat_percentage
+            ? `VAT${detail.vat_percentage}`
+            : "GST18",
           qc_remark: detail.remarks ? "OK" : "Pending",
           price_after_discount: calculatePriceAfterDiscount(
             parseFloat(detail.rate_per_pcs) || 0,
@@ -137,15 +139,14 @@ const ExamplePage = () => {
           ),
           total: parseFloat(detail.final_product_amount) || 0,
         }))
-      : []
+      : [];
   }, [poDetail1State.detailsByRef]);
 
   // Get data from Redux state - PO Detail 4 (Attachments)
   const attachmentsrows = useMemo(() => {
     // Filter by current PO reference number
-    const filteredFiles = poDetail4State.files?.filter(
-      (file) => file.po_ref_no === poRefNo
-    ) || [];
+    const filteredFiles =
+      poDetail4State.files?.filter((file) => file.po_ref_no === poRefNo) || [];
 
     return filteredFiles.length > 0
       ? filteredFiles.map((file) => ({
@@ -159,21 +160,23 @@ const ExamplePage = () => {
           created_date: file.created_date || "",
           file_type: file.file_type || "DOCUMENT",
         }))
-      : []
+      : [];
   }, [poDetail4State.files, poRefNo]);
 
   // Get PO header data
   const poHeaderData = useMemo(() => {
-    return poHeaderState.header || {
-      supplier_name: "JOSEPHAT ANDREA SHAYO",
-      supplier_code: "LOCS100104",
-      contact_person: "JOSEPHAT",
-      po_ref_no: "3517",
-      status: "Open; Printed",
-      posting_date: "08.12.25",
-      delivery_date: "30.12.25",
-      document_date: "08.12.25",
-    };
+    return (
+      poHeaderState.header || {
+        supplier_name: "JOSEPHAT ANDREA SHAYO",
+        supplier_code: "LOCS100104",
+        contact_person: "JOSEPHAT",
+        po_ref_no: "3517",
+        status: "Open; Printed",
+        posting_date: "08.12.25",
+        delivery_date: "30.12.25",
+        document_date: "08.12.25",
+      }
+    );
   }, [poHeaderState.header]);
 
   // Helper functions
@@ -188,7 +191,13 @@ const ExamplePage = () => {
   };
 
   // Modal management
-  const openModalForm = ({ title, fields, submitText, onSubmit, onCloseCallback }) => {
+  const openModalForm = ({
+    title,
+    fields,
+    submitText,
+    onSubmit,
+    onCloseCallback,
+  }) => {
     setModalForm({
       isOpen: true,
       title,
@@ -221,7 +230,7 @@ const ExamplePage = () => {
     try {
       const headerData = {
         po_ref_no: poRefNo,
-        po_date: new Date().toISOString().split('T')[0],
+        po_date: new Date().toISOString().split("T")[0],
         company_id: 1,
         supplier_id: 1,
         purchase_type: "Standard",
@@ -231,14 +240,16 @@ const ExamplePage = () => {
       };
 
       if (poHeaderState.header) {
-        await dispatch(updatePOHeader({
-          poRefNo: poRefNo,
-          headerData: headerData
-        })).unwrap();
+        await dispatch(
+          updatePOHeader({
+            poRefNo: poRefNo,
+            headerData: headerData,
+          })
+        ).unwrap();
       } else {
         await dispatch(createPOHeader(headerData)).unwrap();
       }
-      
+
       closeModalForm();
       return Promise.resolve();
     } catch (error) {
@@ -258,7 +269,8 @@ const ExamplePage = () => {
         total_pcs: parseFloat(data.quantity) || 0,
         rate_per_pcs: parseFloat(data.unit_price) || 0,
         discount_percentage: parseFloat(data.discount) || 0,
-        vat_percentage: parseFloat(data.tax_code?.replace('GST', '').replace('VAT', '')) || 0,
+        vat_percentage:
+          parseFloat(data.tax_code?.replace("GST", "").replace("VAT", "")) || 0,
         remarks: data.qc_remark || "OK",
         created_by: "Admin",
         created_mac_address: "",
@@ -283,15 +295,18 @@ const ExamplePage = () => {
         total_pcs: parseFloat(data.quantity) || 0,
         rate_per_pcs: parseFloat(data.unit_price) || 0,
         discount_percentage: parseFloat(data.discount) || 0,
-        vat_percentage: parseFloat(data.tax_code?.replace('GST', '').replace('VAT', '')) || 0,
+        vat_percentage:
+          parseFloat(data.tax_code?.replace("GST", "").replace("VAT", "")) || 0,
         remarks: data.qc_remark || "OK",
       };
 
-      await dispatch(updatePODetail1({
-        id: editingItem.id,
-        detailData: detailData
-      })).unwrap();
-      
+      await dispatch(
+        updatePODetail1({
+          id: editingItem.id,
+          detailData: detailData,
+        })
+      ).unwrap();
+
       closeModalForm();
       return Promise.resolve();
     } catch (error) {
@@ -324,7 +339,10 @@ const ExamplePage = () => {
       formData.append("po_ref_no", poRefNo);
       formData.append("description_details", data.description_details || "");
       formData.append("file_name", selectedFile.name);
-      formData.append("content_type", selectedFile.type || "application/octet-stream");
+      formData.append(
+        "content_type",
+        selectedFile.type || "application/octet-stream"
+      );
       formData.append("status_master", data.status_master || "ACTIVE");
       formData.append("created_by", data.created_by || "Admin");
       formData.append("created_mac_address", data.created_mac_address || "");
@@ -352,11 +370,13 @@ const ExamplePage = () => {
         UPDATED_BY: data.created_by || "Admin",
       };
 
-      await dispatch(updatePODetail4({
-        id: editingAttachment.id,
-        metadata: metadata
-      })).unwrap();
-      
+      await dispatch(
+        updatePODetail4({
+          id: editingAttachment.id,
+          metadata: metadata,
+        })
+      ).unwrap();
+
       closeModalForm();
       return Promise.resolve();
     } catch (error) {
@@ -598,7 +618,9 @@ const ExamplePage = () => {
       align: "text-right",
       icon: IndianRupee,
       render: (value) => (
-        <span className="font-semibold text-slate-900">₹ {value.toFixed(2)}</span>
+        <span className="font-semibold text-slate-900">
+          ₹ {value.toFixed(2)}
+        </span>
       ),
     },
     {
@@ -680,12 +702,15 @@ const ExamplePage = () => {
 
   // Calculate summary statistics
   const totalValue = rows.reduce((sum, row) => sum + row.total, 0);
-  const avgDiscount = rows.length > 0 
-    ? rows.reduce((sum, row) => sum + row.discount, 0) / rows.length 
-    : 0;
-  const qcPassRate = rows.length > 0
-    ? (rows.filter((row) => row.qc_remark === "OK").length / rows.length) * 100
-    : 0;
+  const avgDiscount =
+    rows.length > 0
+      ? rows.reduce((sum, row) => sum + row.discount, 0) / rows.length
+      : 0;
+  const qcPassRate =
+    rows.length > 0
+      ? (rows.filter((row) => row.qc_remark === "OK").length / rows.length) *
+        100
+      : 0;
 
   return (
     <>
@@ -694,18 +719,64 @@ const ExamplePage = () => {
           <div className="flex flex-col sm:flex-row min-w-full items-start sm:items-center justify-between gap-3">
             <div className="flex-1 w-full">
               <SupplierInfo
-                supplier={{
-                  name: poHeaderData.supplier_name,
-                  code: poHeaderData.supplier_code,
-                  contact: poHeaderData.contact_person,
-                }}
-                po={{
-                  "PO Number": poHeaderData.po_ref_no,
-                  Status: poHeaderData.status,
-                  "Posting Date": poHeaderData.posting_date,
-                  "Delivery Date": poHeaderData.delivery_date,
-                  "Document Date": poHeaderData.document_date,
-                }}
+                title={
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Supplier
+                  </span>
+                }
+                header={
+                  <div className="text-sm sm:text-base md:text-lg font-bold text-slate-900">
+                    {poHeaderData.supplier_name}
+                  </div>
+                }
+                leftContent={
+                  <>
+                    <div className="text-xs sm:text-sm text-slate-600">
+                      Code: {poHeaderData.supplier_code}
+                    </div>
+                    <div className="text-xs sm:text-sm text-slate-600">
+                      Contact: {poHeaderData.contact_person}
+                    </div>
+                  </>
+                }
+                rightContent={
+                  <>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-600">PO Number</span>
+                      <span className="font-medium text-slate-900">
+                        {poHeaderData.po_ref_no}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-600">Status</span>
+                      <span className="font-medium text-slate-900">
+                        {poHeaderData.status}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-600">Posting Date</span>
+                      <span className="font-medium text-slate-900">
+                        {poHeaderData.posting_date}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-600">Delivery Date</span>
+                      <span className="font-medium text-slate-900">
+                        {poHeaderData.delivery_date}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between gap-4">
+                      <span className="text-slate-600">Document Date</span>
+                      <span className="font-medium text-slate-900">
+                        {poHeaderData.document_date}
+                      </span>
+                    </div>
+                  </>
+                }
                 onEdit={() => {
                   openModalForm({
                     title: "Edit Supplier",
@@ -723,11 +794,17 @@ const ExamplePage = () => {
             <RemarksCard remarks="For PFL AGRO1 stitching machine motor rewinding purpose." />
             <SummaryCard
               summary={[
-                { label: "Total Before Discount", value: `₹ ${totalValue.toFixed(2)}` },
+                {
+                  label: "Total Before Discount",
+                  value: `₹ ${totalValue.toFixed(2)}`,
+                },
                 { label: "Discount", value: `${avgDiscount.toFixed(1)}%` },
                 { label: "Freight", value: "₹ 0.00" },
                 { label: "Tax", value: "₹ 0.00" },
-                { label: "Total Payment Due", value: `₹ ${totalValue.toFixed(2)}` },
+                {
+                  label: "Total Payment Due",
+                  value: `₹ ${totalValue.toFixed(2)}`,
+                },
               ]}
             />
           </div>
@@ -956,9 +1033,11 @@ const ExamplePage = () => {
           if (fileInput?.files?.length > 0) {
             setSelectedFile(fileInput.files[0]);
           }
-          
+
           // Call the modal's submit handler
-          return modalForm.onSubmit ? modalForm.onSubmit(data) : Promise.resolve();
+          return modalForm.onSubmit
+            ? modalForm.onSubmit(data)
+            : Promise.resolve();
         }}
       />
     </>

@@ -1,17 +1,39 @@
+// src/pages/LoginPage.jsx
 import React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react';
+import { useEffect } from 'react';
+import { useDispatch,useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom'
+import { fetchPOHeaders } from '../redux/Slice/PO/poHeaderSlice';
+import useUser from '../hooks/useUser'; // Import the custom hook
+import toast from 'react-hot-toast';
 
 const Loginpage = () => {
 const [isOpen, setIsOpen] = React.useState(false);
     const [selected, setSelected] = React.useState("Select");
     const navigate = useNavigate();
-    const user = ["User1", "User2", "User3", "User4"];  
-
-    const handleSelect = (User) => {
-        setSelected(User);
-        navigate('/dashboard', { state: { user: User } });
+    const dispatch =useDispatch();
+    const { setUser } = useUser(); // Use the hook
+    
+      const { headers, status, error } = useSelector(
+        (state) => state.poHeader
+      );
+    
+      useEffect(() => {
+        dispatch(fetchPOHeaders({ page: 1, limit: 20 }));
+      }, [dispatch]);
+    
+    const handleSelect = async(User) => {
+        setSelected(User.po_ref_no);
+        
+        // Use custom hook to set user
+        setUser(User.po_ref_no);
+        
+        navigate('/dashboard');
+        toast.success(`Logged in as ${User.po_ref_no}`);
         setIsOpen(false);
     };
+    
     return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="rounded-xl border border-gray-200 bg-card-background py-8 px-6 max-w-md w-full shadow-lg">
@@ -86,9 +108,9 @@ const [isOpen, setIsOpen] = React.useState(false);
 
             {isOpen && (
                 <ul className="w-full bg-white border border-gray-300 rounded shadow-md mt-1 py-2">
-                    {user.map((userId) => (
+                    {headers.map((userId) => (
                         <li key={userId} className="px-4 py-2 hover:bg-indigo-500 hover:text-white cursor-pointer" onClick={() => handleSelect(userId)} >
-                            {userId}
+                            {userId.po_ref_no}
                         </li>
                     ))}
                 </ul>

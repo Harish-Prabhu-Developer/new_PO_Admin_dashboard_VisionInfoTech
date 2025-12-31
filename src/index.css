@@ -10,6 +10,7 @@
   /* Backgrounds */
   --color-background: oklch(97% 0.01 250);
   --color-card-background: oklch(100% 0 0);
+
 }
 @layer base {
   body {
@@ -18,7 +19,6 @@
     font-family: 'Inter', sans-serif;
   }
 }
-
 
 .input {
   @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm

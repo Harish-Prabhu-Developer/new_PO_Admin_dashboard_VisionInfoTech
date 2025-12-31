@@ -466,20 +466,17 @@ export const updatePOHeaderByRefNo = async (req: Request, res: Response) => {
       });
     }
 
-    if (!modified_by) {
-      return res.status(400).json({
-        error: "modified_by is required for update"
-      });
-    }
+    // Use default modified_by if not provided
+    const modifiedBy = modified_by || 'ADMIN';
 
     // Validate modified_by
-    if (typeof modified_by !== 'string' || modified_by.trim().length === 0) {
+    if (typeof modifiedBy !== 'string' || modifiedBy.trim().length === 0) {
       return res.status(400).json({
         error: "modified_by must be a non-empty string"
       });
     }
 
-    if (modified_by.length > 50) {
+    if (modifiedBy.length > 50) {
       return res.status(400).json({
         error: "modified_by must be 50 characters or less"
       });
@@ -624,7 +621,7 @@ export const updatePOHeaderByRefNo = async (req: Request, res: Response) => {
       addField("status_entry", status_entry, true, false, false, 20);
       
       // Modification info (always added)
-      addField("modified_by", modified_by, true, false, false, 50);
+      addField("modified_by", modifiedBy, true, false, false, 50);
       updateFields.push("modified_date = NOW()"); // Use PostgreSQL NOW() for consistency
       addField("modified_mac_address", modified_mac_address, true, false, false, 50);
       
