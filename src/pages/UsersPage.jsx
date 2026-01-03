@@ -5,7 +5,6 @@ import {
   createPOHeader,
   updatePOHeader,
   deletePOHeader,
-  clearError,
 } from "../redux/Slice/PO/poHeaderSlice";
 import DataTable from "../components/DataTable";
 import { Plus, Pencil, Trash2, FileText } from "lucide-react";
@@ -15,9 +14,7 @@ import toast from "react-hot-toast";
 /* ---------- Main Page ---------- */
 const UsersPage = () => {
   const dispatch = useDispatch();
-  const { headers, status, error } = useSelector(
-    (state) => state.poHeader
-  );
+  const { headers, status } = useSelector((state) => state.poHeader);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -25,84 +22,86 @@ const UsersPage = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteRow, setDeleteRow] = useState(null);
 
-  const [form, setForm] = useState({
-    po_ref_no: "",
-    po_date: "",
-    purchase_type: "",
-    company_id: "",
-    supplier_id: "",
-    po_store_id:"",
-    remarks: "",
-    created_by: "ADMIN",
-  });
-
   /* ---------- Fetch Data ---------- */
   useEffect(() => {
-      dispatch(fetchPOHeaders({ page: 1, limit: 20 }));
+    dispatch(fetchPOHeaders({ page: 1, limit: 20 }));
   }, [dispatch]);
 
   /* ---------- Add / Edit ---------- */
   const openAdd = () => {
     setEditing(null);
-    setForm({
-      po_ref_no: "",
-      po_date: new Date().toISOString().split("T")[0],
-      purchase_type: "",
-      company_id: "",
-      supplier_id: "",
-      po_store_id:"",
-      remarks: "",
-      created_by: "ADMIN",
-    });
     setModalOpen(true);
   };
 
   const openEdit = (row) => {
     setEditing(row);
-    setForm({
-      po_ref_no: row.po_ref_no,
-      po_date: new Date(row.po_date).toISOString().split("T")[0] || "",
-      purchase_type: row.purchase_type || "",
-      company_id: row.company_id || "",
-      supplier_id: row.supplier_id || "",
-      po_store_id: row.po_store_id || "",
-      remarks: row.remarks || "",
-      created_by: row.created_by || "ADMIN" ,
-    });
     setModalOpen(true);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (editing) {
-      toast.promise(
-        dispatch(
-          updatePOHeader({
-            poRefNo: editing.po_ref_no,
-            headerData: form,
-          })
-        ),
-        {
-          loading: "Updating...",
-          success: <b>PO Header updated successfully!</b>,
-          error: (err) => <b>{err?.payload || 'Could not update PO Header.'}</b>,
-        }
-      );
-    } else {
-      toast.promise(
-        dispatch(createPOHeader(form)),
-        {
-          loading: "Creating...",
-          success: <b>PO Header created successfully!</b>,
-          error: (err) => <b>{err?.payload || 'Could not create PO Header.'}</b>,
-        }
-      );
-    }
-
-    setModalOpen(false);
+/* ---------- Submit ---------- */
+const handleHeaderFormSubmit = async (data) => {
+  console.log("Form Data →", data);
+  
+  // Prepare payload according to Swagger spec
+  const payload = {
+    po_ref_no: data.po_ref_no?.trim(),
+    po_date: data.po_date,
+    purchase_type: data.purchase_type?.trim() || null,
+    company_id: data.company_id ? Number(data.company_id) : null,
+    supplier_id: data.supplier_id ? Number(data.supplier_id) : null,
+    po_store_id: data.po_store_id ? Number(data.po_store_id) : null,
+    remarks: data.remarks?.trim() || null,
+    created_by: data.created_by || "ADMIN",
+    created_mac_address: data.created_mac_address || ""
   };
 
+  console.log("FINAL PAYLOAD →", payload);
+
+  if (editing) {
+    // For update, remove created_by and created_mac_address
+    delete payload.created_by;
+    delete payload.created_mac_address;
+    
+    await toast.promise(
+      dispatch(
+        updatePOHeader({
+          poRefNo: editing.po_ref_no,
+          headerData: payload,
+        })
+      ).unwrap(),
+      {
+        loading: "Updating...",
+        success: "PO Header updated successfully!",
+        error: (err) => {
+          console.error("Update error:", err);
+          return err?.message || err?.payload?.error || "Could not update PO Header";
+        },
+      }
+    );
+  } else {
+    // For create, ensure required fields are present
+    if (!payload.po_ref_no || !payload.po_date || !payload.company_id || !payload.supplier_id) {
+      toast.error("Please fill all required fields (PO Ref No, Date, Company ID, Supplier ID)");
+      return;
+    }
+    
+    await toast.promise(
+      dispatch(createPOHeader(payload)).unwrap(),
+      {
+        loading: "Creating...",
+        success: "PO Header created successfully!",
+        error: (err) => {
+          console.error("Create error:", err);
+          return err?.message || err?.payload?.error || "Could not create PO Header";
+        },
+      }
+    );
+  }
+
+  setModalOpen(false);
+  // Refresh data
+  dispatch(fetchPOHeaders({ page: 1, limit: 20 }));
+};
   /* ---------- Delete ---------- */
   const openDelete = (row) => {
     setDeleteRow(row);
@@ -112,14 +111,11 @@ const UsersPage = () => {
   const handleDelete = () => {
     if (!deleteRow) return;
 
-    toast.promise(
-      dispatch(deletePOHeader(deleteRow.po_ref_no)),
-      {
-        loading: "Deleting...",
-        success: <b>PO Header deleted successfully!</b>,
-        error: (err) => <b>{err?.payload || 'Could not delete PO Header.'}</b>,
-      }
-    );
+    toast.promise(dispatch(deletePOHeader(deleteRow.po_ref_no)), {
+      loading: "Deleting...",
+      success: "PO Header deleted successfully!",
+      error: "Could not delete PO Header",
+    });
 
     setDeleteModalOpen(false);
     setDeleteRow(null);
@@ -128,12 +124,7 @@ const UsersPage = () => {
   /* ---------- Table Columns ---------- */
   const columns = useMemo(
     () => [
-      {
-        key: "po_ref_no",
-        label: "PO Ref",
-        icon: FileText,
-        align: "text-left",
-      },
+      { key: "po_ref_no", label: "PO Ref", icon: FileText },
       { key: "po_date", label: "Date" },
       { key: "purchase_type", label: "Type" },
       { key: "company_id", label: "Company" },
@@ -145,15 +136,15 @@ const UsersPage = () => {
           <div className="flex justify-center gap-2">
             <button
               onClick={() => openEdit(row)}
-              className="rounded-md p-1 text-blue-600 hover:bg-blue-50"
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil size={16} />
             </button>
             <button
               onClick={() => openDelete(row)}
-              className="rounded-md p-1 text-red-600 hover:bg-red-50"
+              className="p-1 text-red-600 hover:bg-red-50 rounded"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 size={16} />
             </button>
           </div>
         ),
@@ -163,153 +154,119 @@ const UsersPage = () => {
   );
 
   return (
-    <div className="space-y-4 ">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-lg font-semibold text-slate-800">
-            Purchase Order Headers
-          </h1>
-          <p className="text-xs text-slate-500">
-            Manage PO headers, suppliers, and purchase details
+          <h1 className="text-lg font-semibold">Purchase Order Headers</h1>
+          <p className="text-sm text-gray-500">
+            Manage PO headers and suppliers
           </p>
         </div>
 
         <button
           onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded"
         >
-          <Plus className="h-4 w-4" />
+          <Plus size={16} />
           Add PO
         </button>
       </div>
-
 
       {/* Table */}
       <DataTable
         columns={columns}
         data={headers}
         isLoading={status === "loading"}
-        itemsPerPage={10}
       />
 
       {/* Add / Edit Modal */}
       <ModelForm
-        open={modalOpen}
+        isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? "Edit PO Header" : "Add PO Header"}
-      >
-        <form onSubmit={handleSubmit} className="grid gap-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input
-              className="input"
-              placeholder="PO Ref No"
-              value={form.po_ref_no}
-              disabled={!!editing}
-              onChange={(e) =>
-                setForm({ ...form, po_ref_no: e.target.value })
-              }
-              required
-            />
-            <input
-              type="date"
-              className="input"
-              value={form.po_date}
-              onChange={(e) =>
-                setForm({ ...form, po_date: e.target.value })
-              }
-              required
-            />
-            <input
-              className="input"
-              placeholder="Purchase Type"
-              value={form.purchase_type}
-              onChange={(e) =>
-                setForm({ ...form, purchase_type: e.target.value })
-              }
-            />
-            <input
-              className="input"
-              placeholder="Company ID"
-              value={form.company_id}
-              onChange={(e) =>
-                setForm({ ...form, company_id: e.target.value })
-              }
-            />
-            <input
-              className="input"
-              placeholder="Supplier ID"
-              value={form.supplier_id}
-              onChange={(e) =>
-                setForm({ ...form, supplier_id: e.target.value })
-              }
-            />
-              <input
-              className="input"
-              placeholder="PO Store ID"
-              value={form.po_store_id}
-              onChange={(e) =>
-                setForm({ ...form, po_store_id: e.target.value })
-              }
-            />
-          </div>
+        fields={[
+  {
+    label: "PO Ref No",
+    name: "po_ref_no",
+    type: "text",
+    required: true,
+    defaultValue: editing?.po_ref_no ?? "",
+  },
+  {
+    label: "PO Date",
+    name: "po_date",
+    type: "date",
+    required: true,
+    defaultValue: editing?.po_date
+      ? new Date(editing.po_date).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0],
+  },
+  {
+    label: "Purchase Type",
+    name: "purchase_type",
+    type: "text",
+    defaultValue: editing?.purchase_type ?? "",
+  },
+  {
+    label: "Company ID",
+    name: "company_id",
+    type: "number",
+    required: true,
+    defaultValue: editing?.company_id ?? "",
+  },
+  {
+    label: "Supplier ID",
+    name: "supplier_id",
+    type: "number",
+    required: true,
+    defaultValue: editing?.supplier_id ?? "",
+  },
+  {
+    label: "PO Store ID",
+    name: "po_store_id",
+    type: "number",
+    defaultValue: editing?.po_store_id ?? "",
+  },
+  {
+    label: "Remarks",
+    name: "remarks",
+    type: "textarea",
+    rows: 3,
+    defaultValue: editing?.remarks ?? "",
+  },
+  // Add created_by field for new entries
+  ...(editing ? [] : [{
+    label: "Created By",
+    name: "created_by",
+    type: "text",
+    required: true,
+    defaultValue: "ADMIN",
+  }])
+]}
+        submitText={editing ? "Update" : "Create"}
+        onSubmit={handleHeaderFormSubmit}
+        isLoading={status === "loading"}
+      />
 
-          <textarea
-            className="input"
-            placeholder="Remarks"
-            value={form.remarks}
-            onChange={(e) =>
-              setForm({ ...form, remarks: e.target.value })
-            }
-          />
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              className="rounded-lg border px-4 py-2 text-sm"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-            >
-              {editing ? "Update" : "Create"}
-            </button>
-          </div>
-        </form>
-      </ModelForm>
-
-      {/* Delete Confirmation Modal */}
+      {/* Delete Modal */}
       {deleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-slate-800">
-              Delete PO Header
-            </h3>
-
-            <p className="mt-2 text-sm text-slate-600">
-              Are you sure you want to delete PO{" "}
-              <span className="font-semibold text-red-600">
-                {deleteRow?.po_ref_no}
-              </span>
-              ?
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded w-96">
+            <h3 className="font-semibold text-lg">Delete PO Header</h3>
+            <p className="mt-2">
+              Delete PO <b>{deleteRow?.po_ref_no}</b>?
             </p>
-
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-4 flex justify-end gap-3">
               <button
-                onClick={() => {
-                  setDeleteModalOpen(false);
-                  setDeleteRow(null);
-                }}
-                className="rounded-lg border px-4 py-2 text-sm"
+                onClick={() => setDeleteModalOpen(false)}
+                className="border px-4 py-2 rounded"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+                className="bg-red-600 text-white px-4 py-2 rounded"
               >
                 Delete
               </button>

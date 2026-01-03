@@ -97,7 +97,10 @@ const startServer = async (): Promise<void> => {
     const LOCAL_IP = getLocalIP();
 
     app.listen(PORT, "0.0.0.0", () => {
-      console.log("🚀 Server running on:");
+      if (process.env.NODE_ENV === "production") {
+        console.log(`🚀 Server running in production mode on port ${PORT}`);
+      } else {
+       console.log("🚀 Server running on:");
       console.log(`   ➜ Local:   http://localhost:${PORT}`);
 
       if (LOCAL_IP !== "localhost") {
@@ -106,6 +109,7 @@ const startServer = async (): Promise<void> => {
 
       console.log(`📊 Database: ${process.env.DB_NAME}@${process.env.DB_HOST}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV ?? "development"}`);
+      }
     });
   } catch (err) {
     const error = err as Error;

@@ -1,5 +1,5 @@
 // src/components/ModelForm.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";  // Add useEffect
 import { X, Loader2 } from "lucide-react";
 
 const ModelForm = ({ 
@@ -13,6 +13,22 @@ const ModelForm = ({
 }) => {
   const [formData, setFormData] = useState({});
   const [file, setFile] = useState(null);
+
+  // Reset form when modal opens/closes or fields change
+  useEffect(() => {
+    if (isOpen) {
+      const initialData = {};
+      fields.forEach(field => {
+        if (field.defaultValue !== undefined) {
+          initialData[field.name] = field.defaultValue;
+        } else {
+          initialData[field.name] = '';
+        }
+      });
+      setFormData(initialData);
+      setFile(null);
+    }
+  }, [isOpen, fields]);
 
   if (!isOpen) return null;
 
@@ -30,6 +46,16 @@ const ModelForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate required fields
+    const missingFields = fields
+      .filter(field => field.required && !formData[field.name])
+      .map(field => field.label);
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+    
     // Prepare data for submission
     const submissionData = { ...formData };
     if (file) {
@@ -38,12 +64,10 @@ const ModelForm = ({
     
     try {
       await onSubmit(submissionData);
-      // Reset form on successful submission
-      setFormData({});
-      setFile(null);
-      // Don't close automatically - let parent handle it
+      // Don't reset here - let parent handle success
     } catch (error) {
       console.error("Form submission error:", error);
+      // Error is handled by parent's toast
     }
   };
 
@@ -79,11 +103,11 @@ const ModelForm = ({
                 {field.type === 'textarea' ? (
                   <textarea
                     name={field.name}
-                    value={formData[field.name] || field.defaultValue || ''}
+                    value={formData[field.name] || ''}
                     onChange={handleInputChange}
                     placeholder={field.placeholder}
                     required={field.required}
-                    disabled={isLoading}
+                    disabled={isLoading || field.disabled}
                     rows={field.rows || 3}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
                   />
@@ -93,7 +117,7 @@ const ModelForm = ({
                       type="file"
                       name={field.name}
                       onChange={handleInputChange}
-                      required={field.required}
+                      required={field.required && !file}
                       disabled={isLoading}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100"
                       accept={field.accept || "*/*"}
@@ -104,11 +128,36 @@ const ModelForm = ({
                       </p>
                     )}
                   </div>
+                ) : field.input_type === 'dropdown' || field.type === 'select' ? (
+                  <select
+                    name={field.name}
+                    value={formData[field.name] || ''}
+                    onChange={handleInputChange}
+                    required={field.required}
+                    disabled={isLoading || field.disabled}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
+                  >
+                    <option value="">{field.placeholder || 'Select'}</option>
+                    {(field.options || []).map((opt) => {
+                      if (typeof opt === 'string') {
+                        return (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        );
+                      }
+                      return (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      );
+                    })}
+                  </select>
                 ) : (
                   <input
                     type={field.type || 'text'}
                     name={field.name}
-                    value={formData[field.name] || field.defaultValue || ''}
+                    value={formData[field.name] || ''}
                     onChange={handleInputChange}
                     placeholder={field.placeholder}
                     required={field.required}

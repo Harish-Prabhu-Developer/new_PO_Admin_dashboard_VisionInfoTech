@@ -117,6 +117,11 @@ const ExamplePage = () => {
     dispatch(fetchPODetails4({ page: 1, limit: 50 }));
   }, [dispatch]);
 
+  // Helper function
+  const calculatePriceAfterDiscount = (unitPrice, discount) => {
+    return unitPrice - (unitPrice * discount) / 100;
+  };
+
   // Get data from Redux state - PO Detail 1 (Items)
   const rows = useMemo(() => {
     return poDetail1State.detailsByRef?.length > 0
@@ -180,10 +185,6 @@ const ExamplePage = () => {
   }, [poHeaderState.header]);
 
   // Helper functions
-  const calculatePriceAfterDiscount = (unitPrice, discount) => {
-    return unitPrice - (unitPrice * discount) / 100;
-  };
-
   const calculateTotal = (quantity, unitPrice, discount = 0) => {
     const subtotal = quantity * unitPrice;
     const discountAmount = (subtotal * discount) / 100;

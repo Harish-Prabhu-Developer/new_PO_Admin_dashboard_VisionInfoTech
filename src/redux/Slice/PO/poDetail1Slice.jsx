@@ -14,11 +14,9 @@ export const createPODetail1 = createAsyncThunk(
         `${CONFIG.BASE_URL}/api/v1/po/detail1/po-details1`,
         detailData
       );
-      console.log("PO Detail 1 create Response:", response.data);
       return response.data;
     } catch (error) {
-      console.error("PO Detail 1 create Error:", error);
-      return rejectWithValue(error.response?.data?.msg || error.response?.data?.error || "Failed to create PO detail 1");
+      return rejectWithValue(error.response?.data?.msg || "Failed to create PO detail");
     }
   }
 );
@@ -84,32 +82,25 @@ export const updatePODetail1 = createAsyncThunk(
     try {
       const response = await axios.put(
         `${CONFIG.BASE_URL}/api/v1/po/detail1/po-details1/${id}`,
-        detailData,
-          
+        detailData
       );
-      console.log("PO Detail 1 update Response:", response.data);
       return response.data;
     } catch (error) {
-      console.error("PO Detail 1 update Error:", error);
-      return rejectWithValue(error.response?.data?.msg || "Failed to update PO detail 1");
+      return rejectWithValue(error.response?.data?.msg || "Failed to update PO detail");
     }
   }
 );
-
 // Delete PO Detail 1
 export const deletePODetail1 = createAsyncThunk(
   "poDetail1/delete",
   async (id, { rejectWithValue }) => {
     try {
       const response = await axios.delete(
-        `${CONFIG.BASE_URL}/api/v1/po/detail1/po-details1/${id}`,
-          
+        `${CONFIG.BASE_URL}/api/v1/po/detail1/po-details1/${id}`
       );
-      console.log("PO Detail 1 delete Response:", response.data);
       return response.data;
     } catch (error) {
-      console.error("PO Detail 1 delete Error:", error);
-      return rejectWithValue(error.response?.data?.msg || "Failed to delete PO detail 1");
+      return rejectWithValue(error.response?.data?.msg || "Failed to delete PO detail");
     }
   }
 );

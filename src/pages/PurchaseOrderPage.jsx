@@ -200,6 +200,11 @@ const PurchaseOrderPage = () => {
     setShowSupplierModal(true);
   };
 
+  // Helper functions
+  const calculatePriceAfterDiscount = (unitPrice, discount) => {
+    return unitPrice - (unitPrice * discount) / 100;
+  };
+
   // Get data from Redux state - PO Detail 1 (Items)
   const rows = useMemo(() => {
     return poDetail1State.detailsByRef?.length > 0
@@ -223,6 +228,8 @@ const PurchaseOrderPage = () => {
           ),
           total: parseFloat(detail.final_product_amount) || 
                 (parseFloat(detail.total_pcs) || 0) * (parseFloat(detail.rate_per_pcs) || 0),
+          // Store the actual item data for reference
+          _rawData: detail,
         }))
       : [];
   }, [poDetail1State.detailsByRef]);
@@ -285,11 +292,7 @@ const PurchaseOrderPage = () => {
     ];
   }, [poDetail3State.detailsByRef]);
 
-  // Helper functions
-  const calculatePriceAfterDiscount = (unitPrice, discount) => {
-    return unitPrice - (unitPrice * discount) / 100;
-  };
-
+  // Helper functions (using rows)
   const calculateTotalValue = () => {
     return rows.reduce((sum, row) => sum + row.total, 0);
   };
@@ -370,26 +373,68 @@ const PurchaseOrderPage = () => {
     try {
       setModalForm(prev => ({ ...prev, isLoading: true }));
       
+      // Validate required fields
+      if (!form.po_ref_no) {
+        toast.error("Please select a PO Reference number first");
+        setModalForm(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+      
+      if (!data.rate_per_pcs || parseFloat(data.rate_per_pcs) <= 0) {
+        toast.error("Rate per PCS is required and must be greater than 0");
+        setModalForm(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
       const detailData = {
-        po_ref_no: form.po_ref_no,
-        item_no: data.item_no || `ITM-${Date.now()}`,
-        alternate_product_name: data.description,
-        request_store_id: 1,
-        total_pcs: parseFloat(data.quantity) || 0,
-        rate_per_pcs: parseFloat(data.unit_price) || 0,
-        discount_percentage: parseFloat(data.discount) || 0,
-        vat_percentage: parseFloat(data.tax_code?.replace("GST", "").replace("VAT", "")) || 0,
-        remarks: data.qc_remark || "OK",
+        po_ref_no: form.po_ref_no?.trim() || "",
+        item_no: data.item_no?.trim() || `ITM-${Date.now()}`,
+        alternate_product_name: data.alternate_product_name?.trim() || "",
+        request_store_id: data.request_store_id ? parseInt(data.request_store_id) : 1,
+        po_request_ref_no: data.po_request_ref_no?.trim() || "",
+        proforma_invoice_ref_no: data.proforma_invoice_ref_no?.trim() || "",
+        section_id: data.section_id ? parseInt(data.section_id) : 0,
+        machine_id: data.machine_id ? parseInt(data.machine_id) : 0,
+        main_category_id: data.main_category_id ? parseInt(data.main_category_id) : 0,
+        sub_category_id: data.sub_category_id ? parseInt(data.sub_category_id) : 0,
+        product_id: data.product_id ? parseInt(data.product_id) : 0,
+        packing_type: data.packing_type?.trim() || "",
+        no_pcs_per_packing: data.no_pcs_per_packing ? parseFloat(data.no_pcs_per_packing) : 0,
+        total_pcs: data.total_pcs ? parseFloat(data.total_pcs) : 0,
+        total_packing: data.total_packing ? parseFloat(data.total_packing) : 0,
+        rate_per_pcs: parseFloat(data.rate_per_pcs) || 0,
+        product_amount: data.product_amount ? parseFloat(data.product_amount) : 0,
+        discount_percentage: data.discount_percentage ? parseFloat(data.discount_percentage) : 0,
+        discount_amount: data.discount_amount ? parseFloat(data.discount_amount) : 0,
+        total_product_amount: data.total_product_amount ? parseFloat(data.total_product_amount) : 0,
+        vat_percentage: data.vat_percentage ? parseFloat(data.vat_percentage) : 0,
+        vat_amount: data.vat_amount ? parseFloat(data.vat_amount) : 0,
+        final_product_amount: data.final_product_amount ? parseFloat(data.final_product_amount) : 0,
+        remarks: data.remarks?.trim() || "",
         created_by: username || "Admin",
-        created_mac_address: "",
+        created_mac_address: data.created_mac_address?.trim() || "",
+        lc_needed_status: data.lc_needed_status?.trim() || "",
+        lc_apply_status: data.lc_apply_status?.trim() || "",
+        lc_applied_date: data.lc_applied_date || "",
+        lc_no: data.lc_no?.trim() || "",
+        sup_doc_file: data.sup_doc_file?.trim() || "",
+        truck_id: data.truck_id ? parseInt(data.truck_id) : 0,
+        trailer_id: data.trailer_id ? parseInt(data.trailer_id) : 0,
       };
 
+      console.log("Adding Item Payload:", detailData);
       await dispatch(createPODetail1(detailData)).unwrap();
+      
+      // Refetch items after successful creation
+      if (poRefNo) {
+        await dispatch(fetchPODetails1ByRef(poRefNo));
+      }
+      
       toast.success("Item added successfully");
       closeModalForm();
     } catch (error) {
       console.error("Error adding item:", error);
-      toast.error(error?.message || "Failed to add item");
+      toast.error(error?.message || error?.payload || "Failed to add item");
     } finally {
       setModalForm(prev => ({ ...prev, isLoading: false }));
     }
@@ -401,29 +446,63 @@ const PurchaseOrderPage = () => {
     try {
       setModalForm(prev => ({ ...prev, isLoading: true }));
 
+      // Get the actual PO Detail 1 record ID from your rows data
+      const actualItem = poDetail1State.detailsByRef?.find(
+        item => (item.sno || item.id) === editingItem.id
+      );
+
+      if (!actualItem) {
+        toast.error("Item not found");
+        setModalForm(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
+
       const detailData = {
-        item_no: data.item_no,
-        alternate_product_name: data.description,
-        total_pcs: parseFloat(data.quantity) || 0,
-        rate_per_pcs: parseFloat(data.unit_price) || 0,
-        discount_percentage: parseFloat(data.discount) || 0,
-        vat_percentage: parseFloat(data.tax_code?.replace("GST", "").replace("VAT", "")) || 0,
-        remarks: data.qc_remark || "OK",
+        item_no: data.item_no || actualItem.item_no,
+        alternate_product_name: data.alternate_product_name || actualItem.alternate_product_name,
+        request_store_id: data.request_store_id ? parseInt(data.request_store_id) : actualItem.request_store_id,
+        po_request_ref_no: data.po_request_ref_no || actualItem.po_request_ref_no,
+        proforma_invoice_ref_no: data.proforma_invoice_ref_no || actualItem.proforma_invoice_ref_no,
+        section_id: data.section_id ? parseInt(data.section_id) : actualItem.section_id,
+        machine_id: data.machine_id ? parseInt(data.machine_id) : actualItem.machine_id,
+        main_category_id: data.main_category_id ? parseInt(data.main_category_id) : actualItem.main_category_id,
+        sub_category_id: data.sub_category_id ? parseInt(data.sub_category_id) : actualItem.sub_category_id,
+        product_id: data.product_id ? parseInt(data.product_id) : actualItem.product_id,
+        packing_type: data.packing_type || actualItem.packing_type,
+        no_pcs_per_packing: data.no_pcs_per_packing ? parseFloat(data.no_pcs_per_packing) : actualItem.no_pcs_per_packing,
+        total_pcs: data.total_pcs ? parseFloat(data.total_pcs) : actualItem.total_pcs,
+        total_packing: data.total_packing ? parseFloat(data.total_packing) : actualItem.total_packing,
+        rate_per_pcs: data.rate_per_pcs ? parseFloat(data.rate_per_pcs) : actualItem.rate_per_pcs,
+        product_amount: data.product_amount ? parseFloat(data.product_amount) : actualItem.product_amount,
+        discount_percentage: data.discount_percentage ? parseFloat(data.discount_percentage) : actualItem.discount_percentage,
+        discount_amount: data.discount_amount ? parseFloat(data.discount_amount) : actualItem.discount_amount,
+        total_product_amount: data.total_product_amount ? parseFloat(data.total_product_amount) : actualItem.total_product_amount,
+        vat_percentage: data.vat_percentage ? parseFloat(data.vat_percentage) : actualItem.vat_percentage,
+        vat_amount: data.vat_amount ? parseFloat(data.vat_amount) : actualItem.vat_amount,
+        final_product_amount: data.final_product_amount ? parseFloat(data.final_product_amount) : actualItem.final_product_amount,
+        remarks: data.remarks || actualItem.remarks,
         modified_by: username || "Admin",
       };
 
+      console.log("Updating Item Payload:", detailData, "ID:", actualItem.sno || actualItem.id);
+      
       await dispatch(
         updatePODetail1({
-          id: editingItem.id,
+          id: actualItem.sno || actualItem.id,
           detailData: detailData,
         })
       ).unwrap();
 
+      // Refetch items after successful update
+      if (poRefNo) {
+        await dispatch(fetchPODetails1ByRef(poRefNo));
+      }
+      
       toast.success("Item updated successfully");
       closeModalForm();
     } catch (error) {
       console.error("Error updating item:", error);
-      toast.error(error?.message || "Failed to update item");
+      toast.error(error?.message || error?.payload || "Failed to update item");
     } finally {
       setModalForm(prev => ({ ...prev, isLoading: false }));
     }
@@ -432,11 +511,28 @@ const PurchaseOrderPage = () => {
   const handleDeleteItem = async (itemId) => {
     if (window.confirm("Are you sure you want to delete this item?")) {
       try {
-        await dispatch(deletePODetail1(itemId)).unwrap();
+        // Find the actual item to get the correct ID
+        const actualItem = poDetail1State.detailsByRef?.find(
+          item => (item.sno || item.id) === itemId
+        );
+        
+        if (!actualItem) {
+          toast.error("Item not found");
+          return;
+        }
+        
+        console.log("Deleting Item ID:", actualItem.sno || actualItem.id);
+        await dispatch(deletePODetail1(actualItem.sno || actualItem.id)).unwrap();
+        
+        // Refetch items after successful deletion
+        if (poRefNo) {
+          await dispatch(fetchPODetails1ByRef(poRefNo));
+        }
+        
         toast.success("Item deleted successfully");
       } catch (error) {
         console.error("Error deleting item:", error);
-        toast.error(error?.message || "Failed to delete item");
+        toast.error(error?.message || error?.payload || "Failed to delete item");
       }
     }
   };
@@ -459,16 +555,21 @@ const PurchaseOrderPage = () => {
       formData.append("content_type", data.file.type || "application/octet-stream");
       formData.append("status_master", data.status_master || "ACTIVE");
       formData.append("created_by", username || "Admin");
-      formData.append("created_mac_address", "");
+      formData.append("created_mac_address", data.created_mac_address || "");
       formData.append("file_type", data.file_type || "DOCUMENT");
       formData.append("file", data.file);
 
+      console.log("Uploading Attachment for PO:", form.po_ref_no);
       await dispatch(createPODetail4(formData)).unwrap();
+      
+      // Refetch attachments after successful upload
+      await dispatch(fetchPODetails4({ page: 1, limit: 50 }));
+      
       toast.success("Attachment uploaded successfully");
       closeModalForm();
     } catch (error) {
       console.error("Error adding attachment:", error);
-      toast.error(error?.message || "Failed to upload attachment");
+      toast.error(error?.message || error?.payload || "Failed to upload attachment");
     } finally {
       setModalForm(prev => ({ ...prev, isLoading: false }));
     }
@@ -488,6 +589,8 @@ const PurchaseOrderPage = () => {
         UPDATED_BY: username || "Admin",
       };
 
+      console.log("Updating Attachment ID:", editingAttachment.id, "Metadata:", metadata);
+      
       await dispatch(
         updatePODetail4({
           id: editingAttachment.id,
@@ -495,11 +598,14 @@ const PurchaseOrderPage = () => {
         })
       ).unwrap();
 
+      // Refetch attachments after successful update
+      await dispatch(fetchPODetails4({ page: 1, limit: 50 }));
+
       toast.success("Attachment updated successfully");
       closeModalForm();
     } catch (error) {
       console.error("Error updating attachment:", error);
-      toast.error(error?.message || "Failed to update attachment");
+      toast.error(error?.message || error?.payload || "Failed to update attachment");
     } finally {
       setModalForm(prev => ({ ...prev, isLoading: false }));
     }
@@ -508,68 +614,54 @@ const PurchaseOrderPage = () => {
   const handleDeleteAttachment = async (id) => {
     if (window.confirm("Delete this attachment?")) {
       try {
+        console.log("Deleting Attachment ID:", id);
         await dispatch(deletePODetail4(id)).unwrap();
+        
+        // Refetch attachments after successful deletion
+        await dispatch(fetchPODetails4({ page: 1, limit: 50 }));
+        
         toast.success("Attachment deleted successfully");
       } catch (error) {
         console.error("Error deleting attachment:", error);
-        toast.error(error?.message || "Failed to delete attachment");
+        toast.error(error?.message || error?.payload || "Failed to delete attachment");
       }
     }
   };
 
   // ==================== FIELD CONFIGURATIONS ====================
   const itemFields = [
-    {
-      name: "item_no",
-      label: "Item No",
-      placeholder: "ITM-0001",
-      required: true,
-      type: "text"
-    },
-    {
-      name: "description",
-      label: "Description",
-      placeholder: "Enter item description",
-      required: true,
-      type: "text"
-    },
-    {
-      name: "quantity",
-      label: "Quantity",
-      type: "number",
-      placeholder: "0",
-      required: true,
-      min: 0
-    },
-    {
-      name: "unit_price",
-      label: "Unit Price",
-      type: "number",
-      placeholder: "0.00",
-      required: true,
-      min: 0,
-      step: 0.01
-    },
-    {
-      name: "discount",
-      label: "Discount (%)",
-      type: "number",
-      placeholder: "0",
-      min: 0,
-      max: 100
-    },
-    {
-      name: "tax_code",
-      label: "Tax Code",
-      placeholder: "GST18",
-      type: "text"
-    },
-    {
-      name: "qc_remark",
-      label: "QC Remark",
-      placeholder: "OK",
-      type: "text"
-    },
+    { name: "po_ref_no", label: "PO Reference No", type: "text", placeholder: "select PO Ref No", required: true, input_type: "dropdown" },
+    { name: "request_store_id", label: "Request Store ID", type: "number", placeholder: "0", min: 0 },
+    { name: "po_request_ref_no", label: "PO Request Ref No", type: "text", placeholder: "Reference" },
+    { name: "proforma_invoice_ref_no", label: "Proforma Invoice Ref No", type: "text", placeholder: "Ref No" },
+    { name: "section_id", label: "Section ID", type: "number", placeholder: "0", min: 0 },
+    { name: "machine_id", label: "Machine ID", type: "number", placeholder: "0", min: 0 },
+    { name: "main_category_id", label: "Main Category ID", type: "number", placeholder: "0", min: 0 },
+    { name: "sub_category_id", label: "Sub Category ID", type: "number", placeholder: "0", min: 0 },
+    { name: "product_id", label: "Product ID", type: "number", placeholder: "0", min: 0 },
+    { name: "packing_type", label: "Packing Type", type: "text", placeholder: "Box / Bag" },
+    { name: "no_pcs_per_packing", label: "No. Pcs per Packing", type: "number", placeholder: "0", min: 0 },
+    { name: "total_pcs", label: "Total Pcs", type: "number", placeholder: "0", min: 0 },
+    { name: "total_packing", label: "Total Packing", type: "number", placeholder: "0", min: 0 },
+    { name: "rate_per_pcs", label: "Rate per Pcs", type: "number", placeholder: "0.00", step: 0.01, min: 0 },
+    { name: "product_amount", label: "Product Amount", type: "number", placeholder: "0.00", step: 0.01 },
+    { name: "discount_percentage", label: "Discount Percentage", type: "number", placeholder: "0", min: 0, max: 100 },
+    { name: "discount_amount", label: "Discount Amount", type: "number", placeholder: "0.00", step: 0.01 },
+    { name: "total_product_amount", label: "Total Product Amount", type: "number", placeholder: "0.00", step: 0.01 },
+    { name: "vat_percentage", label: "VAT Percentage", type: "number", placeholder: "0", min: 0, max: 100 },
+    { name: "vat_amount", label: "VAT Amount", type: "number", placeholder: "0.00", step: 0.01 },
+    { name: "final_product_amount", label: "Final Product Amount", type: "number", placeholder: "0.00", step: 0.01 },
+    { name: "remarks", label: "Remarks", type: "text", placeholder: "Enter remarks" },
+    { name: "created_by", label: "Created By", type: "text", placeholder: "User" },
+    { name: "created_mac_address", label: "Created MAC Address", type: "text", placeholder: "00:00:00" },
+    { name: "alternate_product_name", label: "Alternate Product Name", type: "text", placeholder: "Alt name" },
+    { name: "lc_needed_status", label: "LC Needed Status", type: "text", placeholder: "Yes/No" },
+    { name: "lc_apply_status", label: "LC Apply Status", type: "text", placeholder: "Applied/Not Applied" },
+    { name: "lc_applied_date", label: "LC Applied Date", type: "date" },
+    { name: "lc_no", label: "LC No", type: "text", placeholder: "LC Number" },
+    { name: "sup_doc_file", label: "Supplier Doc File", type: "text", placeholder: "filename.pdf" },
+    { name: "truck_id", label: "Truck ID", type: "number", placeholder: "0", min: 0 },
+    { name: "trailer_id", label: "Trailer ID", type: "number", placeholder: "0", min: 0 },
   ];
 
   const attachmentFields = [
@@ -755,14 +847,36 @@ const PurchaseOrderPage = () => {
             <Eye size={16} />
           </button>
           <button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
+              
+              // Find the actual item from detailsByRef
+              const actualItem = poDetail1State.detailsByRef?.find(
+                item => (item.sno || item.id) === row.id
+              );
+              
+              if (!actualItem) {
+                toast.error("Could not load item details");
+                return;
+              }
+              
               setEditingItem(row);
+              
+              // Map the actual item data to form fields
+              const defaultValues = {};
+              itemFields.forEach(field => {
+                defaultValues[field.name] = actualItem[field.name] || "";
+              });
+              
               openModalForm({
                 title: "Edit Item",
                 fields: itemFields.map((field) => ({
                   ...field,
-                  defaultValue: row[field.name] || "",
+                  defaultValue: defaultValues[field.name],
+                  options:
+                    field.input_type === "dropdown"
+                      ? poHeaderState.headers?.map((h) => h.po_ref_no) || []
+                      : field.options || undefined,
                 })),
                 submitText: "Update Item",
                 onSubmit: handleEditItem,
@@ -920,7 +1034,7 @@ const PurchaseOrderPage = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {statsCards.map((stat, index) => (
-            <div key={index} className={`bg-gradient-to-br from-${stat.color}-50 to-${stat.color}-100 border border-${stat.color}-200 rounded-xl p-4`}>
+            <div key={index} className={`bg-linear-to-br from-${stat.color}-50 to-${stat.color}-100 border border-${stat.color}-200 rounded-xl p-4`}>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-slate-600 mb-1">{stat.title}</p>
@@ -946,9 +1060,15 @@ const PurchaseOrderPage = () => {
               {activeTab === "Items" && (
                 <button
                   onClick={() => {
-                    openModalForm({
+                        openModalForm({
                       title: "Add New Item",
-                      fields: itemFields,
+                      fields: itemFields.map((f) => ({
+                        ...f,
+                        defaultValue: f.name === "po_ref_no" ? form.po_ref_no : "",
+                        options: f.input_type === "dropdown"
+                          ? poHeaderState.headers?.map((h) => h.po_ref_no) || []
+                          : f.options || undefined,
+                      })),
                       submitText: "Add Item",
                       onSubmit: handleAddItem,
                     });
@@ -1011,6 +1131,8 @@ const PurchaseOrderPage = () => {
                 onRowClick={(row) => console.log("Row clicked:", row)}
                 className="border-0"
                 loading={isLoadingItems}
+                emptyMessage="No items found"
+                emptySubMessage="Add items to this purchase order"
               />
             )}
             {activeTab === "Logistics" && (
@@ -1023,6 +1145,8 @@ const PurchaseOrderPage = () => {
                 itemsPerPage={7}
                 className="border"
                 loading={isLoadingLogistics}
+                emptyMessage="No logistics data"
+                emptySubMessage="Add logistics information"
               />
             )}
 
@@ -1036,6 +1160,8 @@ const PurchaseOrderPage = () => {
                 itemsPerPage={7}
                 className="border"
                 loading={isLoadingAccounting}
+                emptyMessage="No accounting data"
+                emptySubMessage="Add accounting information"
               />
             )}
 
@@ -1047,33 +1173,9 @@ const PurchaseOrderPage = () => {
                   itemsPerPage={7}
                   className="border-0"
                   loading={isLoadingAttachments}
-                >
-                  {attachmentsrows.length === 0 && !isLoadingAttachments && (
-                    <div className="flex flex-col items-center gap-3 text-center py-12">
-                      <Paperclip className="w-16 h-16 text-slate-300" />
-                      <p className="text-sm font-semibold text-slate-700">
-                        No attachments found
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Upload documents related to this purchase order.
-                      </p>
-                      <button
-                        onClick={() => {
-                          setSelectedFile(null);
-                          openModalForm({
-                            title: "Add Attachment",
-                            fields: attachmentFields,
-                            submitText: "Upload Attachment",
-                            onSubmit: handleAddAttachment,
-                          });
-                        }}
-                        className="text-blue-600 text-xs font-medium hover:text-blue-700"
-                      >
-                        Upload Your First Attachment
-                      </button>
-                    </div>
-                  )}
-                </DataTable>
+                  emptyMessage="No attachments found"
+                  emptySubMessage="Upload documents related to this purchase order"
+                />
               </>
             )}
           </div>
