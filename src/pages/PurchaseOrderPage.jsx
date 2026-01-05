@@ -5,7 +5,7 @@ import SupplierInfo from "../components/SupplierInfo";
 import ModelForm from "../components/ModelForm";
 import { fetchPOHeaders, updatePOHeader, fetchPOHeaderByRef } from "../redux/Slice/PO/poHeaderSlice";
 import useUser from "../hooks/useUser";
-import { formatMonthDayYear } from "../utils/DateUtils";
+import { formatMonthDayYear, formatShortDate } from "../utils/DateUtils";
 import Tabs from "../components/Tabs";
 import { Package, Truck, Calculator, Paperclip, Plus, Edit, Trash2, Eye, Hash, FileText, Scale, IndianRupee, Percent, BadgeCheck, Box, Warehouse, MoreVertical, Calendar, AlignLeft } from "lucide-react";
 import { fetchPODetails1ByRef, createPODetail1, updatePODetail1, deletePODetail1 } from "../redux/Slice/PO/poDetail1Slice";
@@ -85,6 +85,7 @@ const PurchaseOrderPage = () => {
       (header) => header.po_ref_no === username
     );
 
+    console.log("Supplier Data:", supplierData);
     if (!supplierData) return;
 
     const {
@@ -95,13 +96,11 @@ const PurchaseOrderPage = () => {
       supplier_id,
       remarks,
       created_by,
-      supplier_name = "Supplier Name",
-      supplier_code = "",
-      contact_person = "",
-      status = "Open",
-      posting_date = new Date().toISOString().split('T')[0],
-      delivery_date = new Date().toISOString().split('T')[0],
-      document_date = new Date().toISOString().split('T')[0]
+      po_store_id,
+      modified_by,
+      modified_date,
+      status_entry,
+      created_date,
     } = supplierData;
 
     setPoRefNo(po_ref_no);
@@ -115,13 +114,13 @@ const PurchaseOrderPage = () => {
       supplier_id,
       remarks,
       created_by,
-      supplier_name,
-      supplier_code,
-      contact_person,
-      status,
-      posting_date,
-      delivery_date,
-      document_date
+      supplier_name: created_by,
+      supplier_code: supplier_id,
+      contact_person :created_by,
+      status: status_entry,
+      posting_date: formatShortDate(po_date) || "-",
+      delivery_date: formatShortDate(created_date) || "-",
+      document_date: formatShortDate(modified_date) || "-",
     });
   }, [poHeaderState.headers, username]);
 
@@ -161,9 +160,9 @@ const PurchaseOrderPage = () => {
         company_id: editForm.company_id,
         supplier_id: editForm.supplier_id,
         remarks: editForm.remarks,
-        modified_by: editForm.created_by || username || "ADMIN",
+        modified_by: editForm.created_by || "",
       };
-      
+      console.log("Update PO Header Payload:", submitData, "for PO Ref No:", form.po_ref_no);
       await dispatch(updatePOHeader({ 
         poRefNo: form.po_ref_no, 
         headerData: submitData 
@@ -207,8 +206,11 @@ const PurchaseOrderPage = () => {
 
   // Get data from Redux state - PO Detail 1 (Items)
   const rows = useMemo(() => {
+   
+    
     return poDetail1State.detailsByRef?.length > 0
       ? poDetail1State.detailsByRef.map((detail, index) => ({
+        ...detail,
           id: detail.sno || detail.id || Math.random(),
           sno: index + 1,
           item_no: detail.item_no || `ITM-${String(index + 1).padStart(4, '0')}`,
@@ -1211,7 +1213,7 @@ const PurchaseOrderPage = () => {
           { label: "Purchase Type", name: "purchase_type", defaultValue: editForm.purchase_type },
           { label: "Company ID", name: "company_id", type: "number", defaultValue: editForm.company_id },
           { label: "Supplier ID", name: "supplier_id", type: "number", defaultValue: editForm.supplier_id },
-          { label: "Created By", name: "created_by", disabled: true, defaultValue: editForm.created_by },
+          { label: "Created By", name: "created_by", defaultValue: editForm.created_by },
           { label: "PO Date", name: "po_date", type: "date", defaultValue: editForm.po_date && !isNaN(new Date(editForm.po_date)) ? new Date(editForm.po_date).toISOString().split("T")[0] : "" },
           { label: "Remarks", name: "remarks", type: "textarea", defaultValue: editForm.remarks, rows: 3 },
         ]}
