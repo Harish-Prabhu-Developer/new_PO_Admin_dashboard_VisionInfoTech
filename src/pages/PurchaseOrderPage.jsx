@@ -444,7 +444,8 @@ const PurchaseOrderPage = () => {
 
   const handleEditItem = async (data) => {
     if (!editingItem) return;
-
+    console.log("Edit Items data : ",data);
+    
     try {
       setModalForm(prev => ({ ...prev, isLoading: true }));
 
