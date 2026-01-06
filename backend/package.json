@@ -7,7 +7,7 @@
  "type": "module",
  "main": "dist/server.js",
  "scripts": {
-  "clean": "rmdir /s /q dist || rm -rf dist ||mkdir dist",
+  "clean": "rm -rf dist || true",
   "build": "npm run clean && tsc",
   "dev": "nodemon --exec npx tsx src/server.ts",
   "start": "node dist/server.js"
