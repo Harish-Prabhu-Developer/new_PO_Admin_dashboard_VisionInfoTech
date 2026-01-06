@@ -6,6 +6,7 @@ import DashboardPage from "./pages/DashboardPage";
 import LayoutPage from "./pages/LayoutPage";
 import UsersPage from "./pages/UsersPage";
 import PurchaseOrderPage from "./pages/PurchaseOrderPage";
+import TestPage from "./pages/TestPage";
 
 const App = () => {
   return (
@@ -13,7 +14,7 @@ const App = () => {
       <Routes>
         {/* Login Page (without sidebar) */}
         <Route path="/" element={<Loginpage />} />
-        
+        <Route path="/test" element={<TestPage />} />
         {/* Pages with Sidebar Layout */}
         <Route element={<LayoutPage />}>
           <Route path="/dashboard" element={<DashboardPage />} />

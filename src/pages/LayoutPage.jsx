@@ -13,6 +13,7 @@ import {
 import { useEffect } from 'react';
 import useUser from '../hooks/useUser';
 import toast from 'react-hot-toast';
+import FullscreenToggle from '../components/common/FullscreenToggle';
 
 const LayoutPage = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -203,6 +204,10 @@ const LayoutPage = ({ children }) => {
 
             {/* User Profile & Notifications */}
             <div className="flex items-center space-x-4">
+
+              {/* Full Screen Icon on desktop and lager screens */}
+                 <FullscreenToggle />
+              {/* Notifications */}
               <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
                   <span className="text-blue-600 text-sm font-bold">3</span>
@@ -210,10 +215,6 @@ const LayoutPage = ({ children }) => {
               </button>
               
               <div className="hidden md:flex items-center space-x-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium">{username}</p>
-                  {/* <p className="text-xs text-gray-500">Administrator</p> */}
-                </div>
                 <div className="w-10 h-10 rounded-full bg-linear-to-r from-blue-500 to-purple-500"></div>
               </div>
             </div>
