@@ -99,6 +99,10 @@ const startServer = async (): Promise<void> => {
     app.listen(PORT, "0.0.0.0", () => {
       if (process.env.NODE_ENV === "production") {
         console.log(`🚀 Server running in production mode on port ${PORT}`);
+        console.log("🚀 Server running on:");
+        const hostname = os.hostname();
+         console.log(`   ➜ Server:   http://${hostname}:${PORT}`);
+
       } else {
        console.log("🚀 Server running on:");
       console.log(`   ➜ Local:   http://localhost:${PORT}`);
@@ -110,6 +114,7 @@ const startServer = async (): Promise<void> => {
       console.log(`📊 Database: ${process.env.DB_NAME}@${process.env.DB_HOST}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV ?? "development"}`);
       }
+
     });
   } catch (err) {
     const error = err as Error;

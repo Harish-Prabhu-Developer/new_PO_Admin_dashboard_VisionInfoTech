@@ -35,8 +35,18 @@ export const addPODetail4Data = async (req: Request, res: Response) => {
   
   if (req.file?.buffer) {
     content_data = req.file.buffer.toString("base64");
-  } else if (typeof req.body.content_data === "string") {
+    console.info(`File upload received: ${file_name}`);
+    console.info(`File size: ${req.file.size} bytes`);
+    console.info(`Base64 preview: ${content_data.substring(0, 100)}...`);
+    console.info(`Base64 length: ${content_data.length} characters`);
+  } else if (req.body.content_data && typeof req.body.content_data === "string") {
     content_data = req.body.content_data;
+    console.log("file name : ",content_data);
+    
+    // console.info(`Base64 string received: ${content_data.substring(0, 100)||"empty"}...`);
+    // console.info(`Base64 length: ${content_data.length||0} characters`);
+  } else {
+    console.warn("No file or content_data provided");
   }
 
   /* -------------------- Input Validation -------------------- */
@@ -46,6 +56,7 @@ export const addPODetail4Data = async (req: Request, res: Response) => {
     !isNonEmptyString(file_name, 150) ||
     !content_data
   ) {
+    console.error("Validation failed - missing required fields");
     return res.status(400).json({
       success: false,
       msg: "Invalid or missing required fields"
@@ -82,7 +93,13 @@ export const addPODetail4Data = async (req: Request, res: Response) => {
       sanitizeOptionalString(file_type, 50)
     ];
 
+    console.log(`Inserting file record for PO_REF_NO: ${po_ref_no}`);
+    console.log(`Content type: ${values[3]}`);
+    console.log(`File type: ${values[8]}`);
+
     const { rows } = await pool.query(query, values);
+
+    console.info(`File uploaded successfully with SNO: ${rows[0].sno}`);
 
     res.status(201).json({
       success: true,
@@ -124,7 +141,8 @@ export const getAllPODetail4 = async (req: Request, res: Response) => {
         STATUS_MASTER,
         CREATED_BY,
         CREATED_DATE,
-        FILE_TYPE
+        FILE_TYPE,
+        LENGTH(CONTENT_DATA) as content_size
       FROM TBL_PURCHASE_ORDER_FILES_UPLOAD
       ORDER BY CREATED_DATE DESC
       LIMIT $1 OFFSET $2
@@ -134,12 +152,16 @@ export const getAllPODetail4 = async (req: Request, res: Response) => {
       SELECT COUNT(*) FROM TBL_PURCHASE_ORDER_FILES_UPLOAD
     `;
 
+    console.log(`Fetching files - page: ${pageNum}, limit: ${limitNum}`);
+
     const [dataResult, countResult] = await Promise.all([
       pool.query(dataQuery, [limitNum, offset]),
       pool.query(countQuery)
     ]);
 
     const total = Number(countResult.rows[0].count);
+    
+    console.log(`Found ${total} total files, returning ${dataResult.rows.length} files`);
 
     res.status(200).json({
       success: true,
@@ -177,23 +199,49 @@ export const getPODetail4ById = async (req: Request, res: Response) => {
 
   try {
     const query = `
-      SELECT *
+      SELECT 
+        SNO,
+        PO_REF_NO,
+        DESCRIPTION_DETAILS,
+        FILE_NAME,
+        CONTENT_TYPE,
+        CONTENT_DATA,
+        STATUS_MASTER,
+        CREATED_BY,
+        CREATED_DATE,
+        FILE_TYPE,
+        LENGTH(CONTENT_DATA) as content_size
       FROM TBL_PURCHASE_ORDER_FILES_UPLOAD
       WHERE SNO = $1
     `;
 
+    console.log(`Fetching file with ID: ${id}`);
+    
     const { rows } = await pool.query(query, [id]);
 
     if (rows.length === 0) {
+      console.warn(`File with ID ${id} not found`);
       return res.status(404).json({
         success: false,
         msg: "Purchase order file not found"
       });
     }
 
+    const fileData = rows[0];
+    
+    // Log file details without exposing full base64 content
+    console.info(`File retrieved: ${fileData.file_name}`);
+    console.info(`Content size: ${fileData.content_size} characters`);
+    console.info(`Content type: ${fileData.content_type}`);
+    
+    // Optional: Show first 50 chars of base64 for debugging
+    if (fileData.content_data) {
+      console.info(`Base64 preview: ${fileData.content_data.substring(0, 50)}...`);
+    }
+
     res.status(200).json({
       success: true,
-      data: rows[0]
+      data: fileData
     });
   } catch (error: any) {
     console.error("getPODetail4ById error:", error);
@@ -226,6 +274,9 @@ export const updatePODetail4ById = async (req: Request, res: Response) => {
     UPDATED_BY,
   } = req.body;
 
+  console.log(`Updating file with ID: ${id}`);
+  console.log(`Update data:`, { PO_REF_NO, STATUS_MASTER, FILE_TYPE, UPDATED_BY });
+
   try {
     const updateQuery = `
       UPDATE TBL_PURCHASE_ORDER_FILES_UPLOAD
@@ -252,11 +303,14 @@ export const updatePODetail4ById = async (req: Request, res: Response) => {
     const result = await pool.query(updateQuery, values);
 
     if (result.rowCount === 0) {
+      console.warn(`File with ID ${id} not found for update`);
       return res.status(404).json({
         success: false,
         msg: "Purchase order file not found",
       });
     }
+
+    console.info(`File with ID ${id} updated successfully`);
 
     res.status(200).json({
       success: true,
@@ -287,21 +341,26 @@ export const deletePODetail4ById = async (req: Request, res: Response) => {
     });
   }
 
+  console.log(`Deleting file with ID: ${id}`);
+
   try {
     const query = `
       DELETE FROM TBL_PURCHASE_ORDER_FILES_UPLOAD
       WHERE SNO = $1
-      RETURNING SNO
+      RETURNING SNO, FILE_NAME
     `;
 
-    const { rowCount } = await pool.query(query, [id]);
+    const { rows, rowCount } = await pool.query(query, [id]);
 
     if (!rowCount) {
+      console.warn(`File with ID ${id} not found for deletion`);
       return res.status(404).json({
         success: false,
         msg: "Purchase order file not found"
       });
     }
+
+    console.info(`File deleted: ${rows[0].file_name} (SNO: ${rows[0].sno})`);
 
     res.status(200).json({
       success: true,

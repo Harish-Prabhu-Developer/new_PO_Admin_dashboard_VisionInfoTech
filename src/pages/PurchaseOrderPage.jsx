@@ -281,7 +281,47 @@ const PurchaseOrderPage = () => {
   }));
 }, [poDetail2State.detailsByRef]);
 
+  const details3Columns = [
+  { key: "sno", label: "S.No" },
+  { key: "po_ref_no", label: "PO Ref No", align: "text-left" },
+  { key: "discussion_details", label: "Discussion Details", align: "text-left" },
+  { key: "respond_person", label: "Respond Person", align: "text-right" },
+  { key: "remarks", label: "Remarks", align: "text-left" },
+  {
+    key: "response_status",
+    label: "Response Status",
+    render: (val) => (
+      <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
+        {val}
+      </span>
+    ),
+  },
+  
+  { key: "created_by", label: "Created By", align: "text-left" },
+  {
+    key: "created_date",
+    label: "Created Date",
+    render: (val) => new Date(val).toLocaleString(),
+  },
+];
 
+ // Row data for Details 3
+  const details3Rows = useMemo(() => {
+  console.log("Details3Rows:", poDetail3State.detailsByRef);
+
+  if (!poDetail3State.detailsByRef?.length) return [];
+
+  return poDetail3State.detailsByRef.map((d) => ({
+    sno: d.sno,
+    po_ref_no: d.po_ref_no,
+    discussion_details: d.discussion_details,
+    respond_person: d.respond_person,
+    remarks: d.remarks,
+    response_status: d.response_status,
+    created_by: d.created_by,
+    created_date: d.created_date,
+  }));
+}, [poDetail3State.detailsByRef]);
   // Get PO Detail 2 (Logistics) data
   const logisticsData = useMemo(() => {
     const details = poDetail2State.detailsByRef || [];
@@ -1180,11 +1220,8 @@ const PurchaseOrderPage = () => {
 
             {activeTab === "Accounting" && (
               <DataTable
-                columns={[
-                  { key: "key", label: "Field" },
-                  { key: "value", label: "Value" },
-                ]}
-                data={accountingData}
+                columns={details3Columns}
+                data={details3Rows}
                 itemsPerPage={7}
                 className="border"
                 loading={isLoadingAccounting}
