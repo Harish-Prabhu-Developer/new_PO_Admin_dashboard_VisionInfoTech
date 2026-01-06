@@ -22,46 +22,37 @@ export const addPODetail4Data = async (req: Request, res: Response) => {
   const {
     po_ref_no,
     description_details,
-    file_name,
-    content_type,
     status_master,
     created_by,
     created_mac_address,
-    file_type
   } = req.body;
 
-  // Convert Buffer from multer to base64 string
-  let content_data: string | null = null;
-  
-  if (req.file?.buffer) {
-    content_data = req.file.buffer.toString("base64");
-    console.info(`File upload received: ${file_name}`);
-    console.info(`File size: ${req.file.size} bytes`);
-    console.info(`Base64 preview: ${content_data.substring(0, 100)}...`);
-    console.info(`Base64 length: ${content_data.length} characters`);
-  } else if (req.body.content_data && typeof req.body.content_data === "string") {
-    content_data = req.body.content_data;
-    console.log("file name : ",content_data);
-    
-    // console.info(`Base64 string received: ${content_data.substring(0, 100)||"empty"}...`);
-    // console.info(`Base64 length: ${content_data.length||0} characters`);
-  } else {
-    console.warn("No file or content_data provided");
-  }
-
-  /* -------------------- Input Validation -------------------- */
-
-  if (
-    !isNonEmptyString(po_ref_no, 50) ||
-    !isNonEmptyString(file_name, 150) ||
-    !content_data
-  ) {
-    console.error("Validation failed - missing required fields");
+  /* -------------------- Validate file -------------------- */
+  if (!req.file) {
     return res.status(400).json({
       success: false,
-      msg: "Invalid or missing required fields"
+      msg: "File is required",
     });
   }
+
+  const {
+    originalname,
+    mimetype,
+    buffer,
+    size,
+  } = req.file;
+
+  /* -------------------- Validate inputs -------------------- */
+  if (!isNonEmptyString(po_ref_no, 50)) {
+    return res.status(400).json({
+      success: false,
+      msg: "Invalid PO_REF_NO",
+    });
+  }
+
+  console.info(`File upload received: ${originalname}`);
+  console.info(`File size: ${size} bytes`);
+  console.info(`Content type: ${mimetype}`);
 
   try {
     const query = `
@@ -84,48 +75,46 @@ export const addPODetail4Data = async (req: Request, res: Response) => {
     const values = [
       po_ref_no.trim(),
       sanitizeOptionalString(description_details, 100),
-      file_name.trim(),
-      sanitizeOptionalString(content_type, 50) || "application/octet-stream",
-      content_data, // Stored as base64 string
+      originalname,            // FILE_NAME
+      mimetype,                // CONTENT_TYPE
+      buffer,                  // CONTENT_DATA (BYTEA)
       sanitizeOptionalString(status_master, 20) ?? "ACTIVE",
       sanitizeOptionalString(created_by, 50),
       sanitizeOptionalString(created_mac_address, 50),
-      sanitizeOptionalString(file_type, 50)
+      originalname.split(".").pop()?.toLowerCase() || null, // FILE_TYPE
     ];
 
     console.log(`Inserting file record for PO_REF_NO: ${po_ref_no}`);
-    console.log(`Content type: ${values[3]}`);
-    console.log(`File type: ${values[8]}`);
 
     const { rows } = await pool.query(query, values);
-
-    console.info(`File uploaded successfully with SNO: ${rows[0].sno}`);
 
     res.status(201).json({
       success: true,
       msg: "Purchase order file uploaded successfully",
-      sno: rows[0].sno
+      sno: rows[0].sno,
+      file: {
+        name: originalname,
+        type: mimetype,
+        size,
+      },
     });
   } catch (error: any) {
     console.error("addPODetail4Data error:", error);
     res.status(500).json({
       success: false,
-      msg: "Failed to upload purchase order file"
+      msg: "Failed to upload purchase order file",
     });
   }
 };
+
 
 /* ------------------------------------------------------------------ */
 /* FETCH – Get All Purchase Order Files (Paginated)                    */
 /* ------------------------------------------------------------------ */
 
 export const getAllPODetail4 = async (req: Request, res: Response) => {
-  const { 
-    page = 1,
-    limit = 50,
-  } = req.query;
+  const { page = 1, limit = 50 } = req.query;
 
-  /* ---- FIX: normalize & protect pagination values ---- */
   const pageNum = Math.max(Number(page) || 1, 1);
   const limitNum = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const offset = (pageNum - 1) * limitNum;
@@ -133,39 +122,49 @@ export const getAllPODetail4 = async (req: Request, res: Response) => {
   try {
     const dataQuery = `
       SELECT
-        SNO,
-        PO_REF_NO,
-        DESCRIPTION_DETAILS,
-        FILE_NAME,
-        CONTENT_TYPE,
-        STATUS_MASTER,
-        CREATED_BY,
-        CREATED_DATE,
-        FILE_TYPE,
-        LENGTH(CONTENT_DATA) as content_size
-      FROM TBL_PURCHASE_ORDER_FILES_UPLOAD
-      ORDER BY CREATED_DATE DESC
+        sno,
+        po_ref_no,
+        description_details,
+        file_name,
+        content_type,
+        file_type,
+        status_master,
+        created_by,
+        created_date,
+        LENGTH(content_data) AS content_size,
+        ENCODE(content_data, 'base64') AS content_base64
+      FROM tbl_purchase_order_files_upload
+      ORDER BY created_date DESC
       LIMIT $1 OFFSET $2
     `;
 
     const countQuery = `
-      SELECT COUNT(*) FROM TBL_PURCHASE_ORDER_FILES_UPLOAD
+      SELECT COUNT(*) FROM tbl_purchase_order_files_upload
     `;
-
-    console.log(`Fetching files - page: ${pageNum}, limit: ${limitNum}`);
 
     const [dataResult, countResult] = await Promise.all([
       pool.query(dataQuery, [limitNum, offset]),
-      pool.query(countQuery)
+      pool.query(countQuery),
     ]);
 
+    const dataWithDataUrl = dataResult.rows.map((row) => ({
+      sno: row.sno,
+      po_ref_no: row.po_ref_no,
+      description_details: row.description_details,
+      file_name: row.file_name,
+      file_type: row.file_type,
+      status_master: row.status_master,
+      created_by: row.created_by,
+      created_date: row.created_date,
+      content_size: row.content_size,
+      file_url: `data:${row.content_type};base64,${row.content_base64}`,
+    }));
+
     const total = Number(countResult.rows[0].count);
-    
-    console.log(`Found ${total} total files, returning ${dataResult.rows.length} files`);
 
     res.status(200).json({
       success: true,
-      data: dataResult.rows,
+      data: dataWithDataUrl,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -173,14 +172,17 @@ export const getAllPODetail4 = async (req: Request, res: Response) => {
         pages: Math.ceil(total / limitNum),
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("getAllPODetail4 error:", error);
     res.status(500).json({
       success: false,
-      msg: "Failed to fetch purchase order files"
+      msg: "Failed to fetch purchase order files",
     });
   }
 };
+
+
+
 
 
 /* ------------------------------------------------------------------ */

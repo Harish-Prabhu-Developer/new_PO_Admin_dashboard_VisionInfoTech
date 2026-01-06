@@ -322,28 +322,20 @@ const PurchaseOrderPage = () => {
     created_date: d.created_date,
   }));
 }, [poDetail3State.detailsByRef]);
-  // Get PO Detail 2 (Logistics) data
-  const logisticsData = useMemo(() => {
-    const details = poDetail2State.detailsByRef || [];
-    if (details.length > 0) {
-      return details.map(detail => ({
-        key: detail.field_name || "Field",
-        value: detail.field_value || ""
-      }));
-    }
-    return [
-      { key: "Ship To", value: "10974 KISONGO" },
-      { key: "Bill To", value: "ACCOUNTS DEPT - ARUSHA" },
-      { key: "Delivery Date", value: form.delivery_date || "2025-12-30" },
-      { key: "Shipping Type", value: "Road Transport" },
-      { key: "Transport Mode", value: "Truck" },
-      { key: "Incoterms", value: "DAP" },
-      { key: "Tracking No", value: "" },
-      { key: "Vehicle No", value: "" },
-      { key: "Warehouse", value: "MAIN" },
-    ];
-  }, [poDetail2State.detailsByRef, form.delivery_date]);
-
+  
+const details4Rows = useMemo(() => {
+  console.log("Details4Rows:", poDetail4State.detailsByRef);
+  if (!poDetail4State.detailsByRef?.length) return [];
+  return poDetail4State.detailsByRef.map((d) => ({
+    sno: d.sno,
+    po_ref_no: d.po_ref_no,
+    file_name: d.file_name,
+    content_type: d.content_type,
+    file_path: d.file_path,
+    created_by: d.created_by,
+    created_date: d.created_date,
+  }))
+}, [poDetail4State.detailsByRef]);
   // Get PO Detail 3 (Accounting) data
   const accountingData = useMemo(() => {
     const details = poDetail3State.detailsByRef || [];
@@ -1234,7 +1226,7 @@ const PurchaseOrderPage = () => {
               <>
                 <DataTable
                   columns={attachmentColumns}
-                  data={[]}
+                  data={details4Rows}
                   itemsPerPage={7}
                   className="border-0"
                   loading={isLoadingAttachments}
