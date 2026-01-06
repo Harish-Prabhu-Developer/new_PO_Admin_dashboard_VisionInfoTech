@@ -38,70 +38,80 @@ const UsersPage = () => {
     setModalOpen(true);
   };
 
-/* ---------- Submit ---------- */
-const handleHeaderFormSubmit = async (data) => {
-  console.log("Form Data →", data);
-  
-  // Prepare payload according to Swagger spec
-  const payload = {
-    po_ref_no: data.po_ref_no?.trim(),
-    po_date: data.po_date,
-    purchase_type: data.purchase_type?.trim() || null,
-    company_id: data.company_id ? Number(data.company_id) : null,
-    supplier_id: data.supplier_id ? Number(data.supplier_id) : null,
-    po_store_id: data.po_store_id ? Number(data.po_store_id) : null,
-    remarks: data.remarks?.trim() || null,
-    created_by: data.created_by || "ADMIN",
-    created_mac_address: data.created_mac_address || ""
-  };
+  /* ---------- Submit ---------- */
+  const handleHeaderFormSubmit = async (data) => {
+    console.log("Form Data →", data);
 
-  console.log("FINAL PAYLOAD →", payload);
+    // Prepare payload according to Swagger spec
+    const payload = {
+      po_ref_no: data.po_ref_no?.trim(),
+      po_date: data.po_date,
+      purchase_type: data.purchase_type?.trim() || null,
+      company_id: data.company_id ? Number(data.company_id) : null,
+      supplier_id: data.supplier_id ? Number(data.supplier_id) : null,
+      po_store_id: data.po_store_id ? Number(data.po_store_id) : null,
+      remarks: data.remarks?.trim() || null,
+      created_by: data.created_by || "ADMIN",
+      created_mac_address: data.created_mac_address || "",
+    };
 
-  if (editing) {
-    // For update, remove created_by and created_mac_address
-    delete payload.created_by;
-    delete payload.created_mac_address;
-    
-    await toast.promise(
-      dispatch(
-        updatePOHeader({
-          poRefNo: editing.po_ref_no,
-          headerData: payload,
-        })
-      ).unwrap(),
-      {
-        loading: "Updating...",
-        success: "PO Header updated successfully!",
-        error: (err) => {
-          console.error("Update error:", err);
-          return err?.message || err?.payload?.error || "Could not update PO Header";
-        },
+    console.log("FINAL PAYLOAD →", payload);
+
+    if (editing) {
+      // For update, remove created_by and created_mac_address
+      delete payload.created_by;
+      delete payload.created_mac_address;
+
+      await toast.promise(
+        dispatch(
+          updatePOHeader({
+            poRefNo: editing.po_ref_no,
+            headerData: payload,
+          })
+        ).unwrap(),
+        {
+          loading: "Updating...",
+          success: "PO Header updated successfully!",
+          error: (err) => {
+            console.error("Update error:", err);
+            return (
+              err?.message ||
+              err?.payload?.error ||
+              "Could not update PO Header"
+            );
+          },
+        }
+      );
+    } else {
+      // For create, ensure required fields are present
+      if (
+        !payload.po_ref_no ||
+        !payload.po_date ||
+        !payload.company_id ||
+        !payload.supplier_id
+      ) {
+        toast.error(
+          "Please fill all required fields (PO Ref No, Date, Company ID, Supplier ID)"
+        );
+        return;
       }
-    );
-  } else {
-    // For create, ensure required fields are present
-    if (!payload.po_ref_no || !payload.po_date || !payload.company_id || !payload.supplier_id) {
-      toast.error("Please fill all required fields (PO Ref No, Date, Company ID, Supplier ID)");
-      return;
-    }
-    
-    await toast.promise(
-      dispatch(createPOHeader(payload)).unwrap(),
-      {
+
+      await toast.promise(dispatch(createPOHeader(payload)).unwrap(), {
         loading: "Creating...",
         success: "PO Header created successfully!",
         error: (err) => {
           console.error("Create error:", err);
-          return err?.message || err?.payload?.error || "Could not create PO Header";
+          return (
+            err?.message || err?.payload?.error || "Could not create PO Header"
+          );
         },
-      }
-    );
-  }
+      });
+    }
 
-  setModalOpen(false);
-  // Refresh data
-  dispatch(fetchPOHeaders({ page: 1, limit: 20 }));
-};
+    setModalOpen(false);
+    // Refresh data
+    dispatch(fetchPOHeaders({ page: 1, limit: 20 }));
+  };
   /* ---------- Delete ---------- */
   const openDelete = (row) => {
     setDeleteRow(row);
@@ -178,6 +188,9 @@ const handleHeaderFormSubmit = async (data) => {
         columns={columns}
         data={headers}
         isLoading={status === "loading"}
+        itemsPerPage={7}
+        emptyMessage="No Users found"
+        emptySubMessage="Add Users to access them here."
       />
 
       {/* Add / Edit Modal */}
@@ -186,64 +199,68 @@ const handleHeaderFormSubmit = async (data) => {
         onClose={() => setModalOpen(false)}
         title={editing ? "Edit PO Header" : "Add PO Header"}
         fields={[
-  {
-    label: "PO Ref No",
-    name: "po_ref_no",
-    type: "text",
-    required: true,
-    defaultValue: editing?.po_ref_no ?? "",
-  },
-  {
-    label: "PO Date",
-    name: "po_date",
-    type: "date",
-    required: true,
-    defaultValue: editing?.po_date
-      ? new Date(editing.po_date).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0],
-  },
-  {
-    label: "Purchase Type",
-    name: "purchase_type",
-    type: "text",
-    defaultValue: editing?.purchase_type ?? "",
-  },
-  {
-    label: "Company ID",
-    name: "company_id",
-    type: "number",
-    required: true,
-    defaultValue: editing?.company_id ?? "",
-  },
-  {
-    label: "Supplier ID",
-    name: "supplier_id",
-    type: "number",
-    required: true,
-    defaultValue: editing?.supplier_id ?? "",
-  },
-  {
-    label: "PO Store ID",
-    name: "po_store_id",
-    type: "number",
-    defaultValue: editing?.po_store_id ?? "",
-  },
-  {
-    label: "Remarks",
-    name: "remarks",
-    type: "textarea",
-    rows: 3,
-    defaultValue: editing?.remarks ?? "",
-  },
-  // Add created_by field for new entries
-  ...(editing ? [] : [{
-    label: "Created By",
-    name: "created_by",
-    type: "text",
-    required: true,
-    defaultValue: "ADMIN",
-  }])
-]}
+          {
+            label: "PO Ref No",
+            name: "po_ref_no",
+            type: "text",
+            required: true,
+            defaultValue: editing?.po_ref_no ?? "",
+          },
+          {
+            label: "PO Date",
+            name: "po_date",
+            type: "date",
+            required: true,
+            defaultValue: editing?.po_date
+              ? new Date(editing.po_date).toISOString().split("T")[0]
+              : new Date().toISOString().split("T")[0],
+          },
+          {
+            label: "Purchase Type",
+            name: "purchase_type",
+            type: "text",
+            defaultValue: editing?.purchase_type ?? "",
+          },
+          {
+            label: "Company ID",
+            name: "company_id",
+            type: "number",
+            required: true,
+            defaultValue: editing?.company_id ?? "",
+          },
+          {
+            label: "Supplier ID",
+            name: "supplier_id",
+            type: "number",
+            required: true,
+            defaultValue: editing?.supplier_id ?? "",
+          },
+          {
+            label: "PO Store ID",
+            name: "po_store_id",
+            type: "number",
+            defaultValue: editing?.po_store_id ?? "",
+          },
+          {
+            label: "Remarks",
+            name: "remarks",
+            type: "textarea",
+            rows: 3,
+            defaultValue: editing?.remarks ?? "",
+          },
+          // Add created_by field for new entries
+          ...(editing
+            ? []
+            : [
+                {
+                  label: "Created By",
+                  name: "created_by",
+                  type: "text",
+                  required: true,
+                  defaultValue: "ADMIN",
+                },
+              ]),
+        ]}
         submitText={editing ? "Update" : "Create"}
         onSubmit={handleHeaderFormSubmit}
         isLoading={status === "loading"}

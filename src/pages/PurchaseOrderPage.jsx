@@ -204,6 +204,8 @@ const PurchaseOrderPage = () => {
     return unitPrice - (unitPrice * discount) / 100;
   };
 
+
+  
   // Get data from Redux state - PO Detail 1 (Items)
   const rows = useMemo(() => {
    
@@ -236,24 +238,49 @@ const PurchaseOrderPage = () => {
       : [];
   }, [poDetail1State.detailsByRef]);
 
-  // Get data from Redux state - PO Detail 4 (Attachments)
-  const attachmentsrows = useMemo(() => {
-    const filteredFiles = poDetail4State.files?.filter((file) => file.po_ref_no === poRefNo) || [];
-    
-    return filteredFiles.length > 0
-      ? filteredFiles.map((file) => ({
-          id: file.sno || Math.random(),
-          po_ref_no: file.po_ref_no,
-          filename: file.file_name || "",
-          description_details: file.description_details || "",
-          content_type: file.content_type || "application/octet-stream",
-          status_master: file.status_master || "ACTIVE",
-          created_by: file.created_by || "",
-          created_date: file.created_date || new Date().toISOString().split('T')[0],
-          file_type: file.file_type || "DOCUMENT",
-        }))
-      : [];
-  }, [poDetail4State.files, poRefNo]);
+
+  const details2Columns = [
+  { key: "sno", label: "S.No" },
+  { key: "po_ref_no", label: "PO Ref No", align: "text-left" },
+  { key: "additional_cost_type", label: "Cost Type", align: "text-left" },
+  { key: "amount", label: "Amount", align: "text-right" },
+  { key: "remarks", label: "Remarks", align: "text-left" },
+  {
+    key: "status_master",
+    label: "Status",
+    render: (val) => (
+      <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
+        {val}
+      </span>
+    ),
+  },
+  { key: "created_by", label: "Created By", align: "text-left" },
+  {
+    key: "created_date",
+    label: "Created Date",
+    render: (val) => new Date(val).toLocaleString(),
+  },
+];
+
+
+  // Row data for Details 2
+  const details2Rows = useMemo(() => {
+  console.log("Details2Rows:", poDetail2State.detailsByRef);
+
+  if (!poDetail2State.detailsByRef?.length) return [];
+
+  return poDetail2State.detailsByRef.map((d) => ({
+    sno: d.sno,
+    po_ref_no: d.po_ref_no,
+    additional_cost_type: d.additional_cost_type,
+    amount: d.amount,
+    remarks: d.remarks,
+    status_master: d.status_master,
+    created_by: d.created_by,
+    created_date: d.created_date,
+  }));
+}, [poDetail2State.detailsByRef]);
+
 
   // Get PO Detail 2 (Logistics) data
   const logisticsData = useMemo(() => {
@@ -1140,17 +1167,15 @@ const PurchaseOrderPage = () => {
             )}
             {activeTab === "Logistics" && (
               <DataTable
-                columns={[
-                  { key: "key", label: "Field" },
-                  { key: "value", label: "Value" },
-                ]}
-                data={logisticsData}
-                itemsPerPage={7}
-                className="border"
-                loading={isLoadingLogistics}
-                emptyMessage="No logistics data"
-                emptySubMessage="Add logistics information"
-              />
+              columns={details2Columns}
+              data={details2Rows}
+              itemsPerPage={7}
+              className="border"
+              isLoading={isLoadingLogistics}
+              emptyMessage="No logistics data"
+              emptySubMessage="Add logistics information"
+            />
+
             )}
 
             {activeTab === "Accounting" && (
