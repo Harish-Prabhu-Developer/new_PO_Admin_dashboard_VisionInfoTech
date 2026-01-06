@@ -1197,7 +1197,7 @@ const PurchaseOrderPage = () => {
               <>
                 <DataTable
                   columns={attachmentColumns}
-                  data={attachmentsrows}
+                  data={[]}
                   itemsPerPage={7}
                   className="border-0"
                   loading={isLoadingAttachments}
