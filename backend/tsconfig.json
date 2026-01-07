@@ -1,33 +1,37 @@
 {
   "compilerOptions": {
-    /* Runtime */
     "target": "ES2022",
     "lib": ["ES2022"],
+
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
 
-    /* Project structure */
     "rootDir": "./src",
     "outDir": "./dist",
 
-    /* Node compatibility */
-    "types": ["node"],
+    "types": [
+      "node",
+      "express",
+      "cors",
+      "multer",
+      "pg",
+      "swagger-ui-express"
+    ],
+
     "esModuleInterop": true,
     "resolveJsonModule": true,
 
-    /* Strictness */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
 
-    /* Output */
     "sourceMap": true,
     "declaration": false,
 
-    /* Build safety */
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
+    "isolatedModules": false,
+    "verbatimModuleSyntax": false,
     "moduleDetection": "force",
+
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts"],
